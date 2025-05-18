@@ -1,4 +1,4 @@
-name: jpf-display-module
+name: jpf_display
 build:
   cmake: .
   kconfig: Kconfig
