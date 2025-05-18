@@ -1,0 +1,8 @@
+name: jpf-display-module
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    board_root: .
+  depends:
+    - lvgl
