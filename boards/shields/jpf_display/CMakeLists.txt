@@ -9,7 +9,7 @@ if(CONFIG_SHIELD_JPF_ADAPTER)
   zephyr_library_include_directories(${ZEPHYR_CURRENT_CMAKE_DIR}/include)
   zephyr_library_include_directories(include)
   zephyr_library_sources(brightness.c)
-  zephyr_library_sources(custom_status_screen.c)
+  #zephyr_library_sources(custom_status_screen.c)
   zephyr_library_sources(display_rotate_init.c)
   
   
