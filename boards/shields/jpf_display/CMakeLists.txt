@@ -11,6 +11,7 @@ if(CONFIG_SHIELD_JPF_ADAPTER)
   zephyr_library_sources(brightness.c)
   zephyr_library_sources(custom_status_screen.c)
   zephyr_library_sources(display_rotate_init.c)
+  zephyr_library_sources(widgets/output_status.c)
   
   
   
