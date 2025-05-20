@@ -45,26 +45,41 @@ static struct output_status_state get_state(const zmk_event_t *_eh)
 
 static void set_status_symbol(struct zmk_widget_output_status *widget, struct output_status_state state)
 {
-    const char *transport_str = "UNKNOWN";
+    const char *transport_ble_color = "ffffff";
+    char transport_text[50] = {};
+
+    if (state.active_profile_connected== 1)
+    {
+        transport_ble_color= "00ff00";
+    } else if (state.active_profile_bonded== 1)
+    {
+        transport_ble_color= "0000ff";
+    } else
+    {
+        transport_ble_color= "ffffff";
+    }
+
     switch (state.selected_endpoint.transport)
     {
     case ZMK_TRANSPORT_USB:
-        transport_str = "USB";
+        snprintf(transport_text, sizeof(transport_text), "> USB\n#%s BLE#", transport_ble_color);
         break;
     case ZMK_TRANSPORT_BLE:
-        transport_str = "BLE";
+        snprintf(transport_text, sizeof(transport_text), "USB\n> #%s BLE#", transport_ble_color);
         break;
     }
 
-    char transport_text[8] = {};
-    snprintf(transport_text, sizeof(transport_text), "%s", transport_str);
+    
+    lv_label_set_recolor(widget->transport_label, true);
+    lv_obj_set_style_text_align(widget->transport_label, LV_TEXT_ALIGN_RIGHT, 0);
     lv_label_set_text(widget->transport_label, transport_text);
 
-    char ble_text[47];
-    snprintf(ble_text, sizeof(ble_text), "Profil: %d\nConnected: %d - Bonded: %d",
-             state.active_profile_index,
-             state.active_profile_connected,
-             state.active_profile_bonded);
+    
+
+    char ble_text[12];
+
+    snprintf(ble_text, sizeof(ble_text), "%d", state.active_profile_index);
+    // lv_obj_set_style_text_align(widget->ble_label, LV_TEXT_ALIGN_RIGHT, 0);
     lv_label_set_text(widget->ble_label, ble_text);
 }
 
@@ -87,14 +102,13 @@ ZMK_SUBSCRIPTION(widget_output_status, zmk_usb_conn_state_changed);
 int zmk_widget_output_status_init(struct zmk_widget_output_status *widget, lv_obj_t *parent)
 {
     widget->obj = lv_obj_create(parent);
-    lv_obj_set_size(widget->obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_size(widget->obj, 240, 60);
 
     widget->transport_label = lv_label_create(widget->obj);
     lv_obj_align(widget->transport_label, LV_ALIGN_TOP_RIGHT, -10, 10);
 
     widget->ble_label = lv_label_create(widget->obj);
-    lv_label_set_long_mode(widget->ble_label, LV_LABEL_LONG_WRAP);
-    lv_obj_align(widget->ble_label, LV_ALIGN_TOP_LEFT, 1, 35);
+    lv_obj_align(widget->ble_label, LV_ALIGN_TOP_RIGHT, -10, 56);
 
     sys_slist_append(&widgets, &widget->node);
 
