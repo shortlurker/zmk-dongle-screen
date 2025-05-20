@@ -90,7 +90,7 @@ int zmk_widget_output_status_init(struct zmk_widget_output_status *widget, lv_ob
     lv_obj_set_size(widget->obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
 
     widget->transport_label = lv_label_create(widget->obj);
-    lv_obj_align(widget->transport_label, LV_ALIGN_TOP_LEFT, 1, 0);
+    lv_obj_align(widget->transport_label, LV_ALIGN_TOP_RIGHT, 1, 0);
 
     widget->ble_label = lv_label_create(widget->obj);
     lv_label_set_long_mode(widget->ble_label, LV_LABEL_LONG_WRAP);
