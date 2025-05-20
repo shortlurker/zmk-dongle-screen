@@ -55,6 +55,10 @@ config LV_COLOR_16_SWAP
 config LV_DISP_DEF_REFR_PERIOD
     default 20
 
+choice LV_FONT_DEFAULT
+    default LV_FONT_DEFAULT_MONTSERRAT_20
+endchoice
+
 config PWM
     default y
 

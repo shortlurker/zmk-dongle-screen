@@ -43,9 +43,8 @@ static struct output_status_state get_state(const zmk_event_t *_eh)
         .usb_is_hid_ready = zmk_usb_is_hid_ready()};                       // 0 = not ready, 1 = ready
 }
 
-static void set_status_symbol(lv_obj_t *widget, struct output_status_state state)
+static void set_status_symbol(struct zmk_widget_output_status *widget, struct output_status_state state)
 {
-
     const char *transport_str = "UNKNOWN";
     switch (state.selected_endpoint.transport)
     {
@@ -57,19 +56,25 @@ static void set_status_symbol(lv_obj_t *widget, struct output_status_state state
         break;
     }
 
-    LOG_INF("set_status_symbol: endpoint=%d (%s), profile_idx=%d, profile_connected=%d, profile_bonded=%d, usb_hid_ready=%d",
-            state.selected_endpoint.transport,
-            transport_str,
-            state.active_profile_index,
-            state.active_profile_connected,
-            state.active_profile_bonded,
-            state.usb_is_hid_ready);
+    char transport_text[8] = {};
+    snprintf(transport_text, sizeof(transport_text), "%s", transport_str);
+    lv_label_set_text(widget->transport_label, transport_text);
+
+    char ble_text[47];
+    snprintf(ble_text, sizeof(ble_text), "Profil: %d\nConnected: %d - Bonded: %d",
+             state.active_profile_index,
+             state.active_profile_connected,
+             state.active_profile_bonded);
+    lv_label_set_text(widget->ble_label, ble_text);
 }
 
 static void output_status_update_cb(struct output_status_state state)
 {
     struct zmk_widget_output_status *widget;
-    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node) { set_status_symbol(widget->obj, state); }
+    SYS_SLIST_FOR_EACH_CONTAINER(&widgets, widget, node)
+    {
+        set_status_symbol(widget, state);
+    }
 }
 
 ZMK_DISPLAY_WIDGET_LISTENER(widget_output_status, struct output_status_state,
@@ -78,11 +83,18 @@ ZMK_SUBSCRIPTION(widget_output_status, zmk_endpoint_changed);
 ZMK_SUBSCRIPTION(widget_output_status, zmk_ble_active_profile_changed);
 ZMK_SUBSCRIPTION(widget_output_status, zmk_usb_conn_state_changed);
 
+// output_status.c
 int zmk_widget_output_status_init(struct zmk_widget_output_status *widget, lv_obj_t *parent)
 {
     widget->obj = lv_obj_create(parent);
-
     lv_obj_set_size(widget->obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+
+    widget->transport_label = lv_label_create(widget->obj);
+    lv_obj_align(widget->transport_label, LV_ALIGN_TOP_LEFT, 1, 0);
+
+    widget->ble_label = lv_label_create(widget->obj);
+    lv_label_set_long_mode(widget->ble_label, LV_LABEL_LONG_WRAP);
+    lv_obj_align(widget->ble_label, LV_ALIGN_TOP_LEFT, 1, 25);
 
     sys_slist_append(&widgets, &widget->node);
 

@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "custom_status_screen.h": "c"
+        "custom_status_screen.h": "c",
+        "layer_status.h": "c",
+        "battery_status.h": "c"
     }
 }
