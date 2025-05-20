@@ -94,7 +94,7 @@ int zmk_widget_output_status_init(struct zmk_widget_output_status *widget, lv_ob
 
     widget->ble_label = lv_label_create(widget->obj);
     lv_label_set_long_mode(widget->ble_label, LV_LABEL_LONG_WRAP);
-    lv_obj_align(widget->ble_label, LV_ALIGN_TOP_LEFT, 1, 25);
+    lv_obj_align(widget->ble_label, LV_ALIGN_TOP_LEFT, 1, 35);
 
     sys_slist_append(&widgets, &widget->node);
 
