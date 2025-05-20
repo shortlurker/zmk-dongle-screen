@@ -39,7 +39,7 @@ struct battery_object {
     lv_obj_t *label;
 } battery_objects[ZMK_SPLIT_CENTRAL_PERIPHERAL_COUNT + SOURCE_OFFSET];
     
-static lv_color_t battery_image_buffer[ZMK_SPLIT_CENTRAL_PERIPHERAL_COUNT + SOURCE_OFFSET][5 * 8];
+static lv_color_t battery_image_buffer[ZMK_SPLIT_CENTRAL_PERIPHERAL_COUNT + SOURCE_OFFSET][102 * 5];
 
 static void draw_battery(lv_obj_t *canvas, uint8_t level, bool usb_present) {
     lv_canvas_fill_bg(canvas, lv_color_black(), LV_OPA_COVER);
@@ -47,26 +47,20 @@ static void draw_battery(lv_obj_t *canvas, uint8_t level, bool usb_present) {
     lv_draw_rect_dsc_t rect_fill_dsc;
     lv_draw_rect_dsc_init(&rect_fill_dsc);
 
-    if (usb_present) {
-        rect_fill_dsc.bg_opa = LV_OPA_TRANSP;
-        rect_fill_dsc.border_color = lv_color_white();
-        rect_fill_dsc.border_width = 1;
-    }
 
     lv_canvas_set_px(canvas, 0, 0, lv_color_white());
-    lv_canvas_set_px(canvas, 4, 0, lv_color_white());
+    lv_canvas_set_px(canvas, 0, 4, lv_color_white());
+    lv_canvas_set_px(canvas, 101, 0, lv_color_white());
+    lv_canvas_set_px(canvas, 101, 4, lv_color_white());
 
-    if (level <= 10 || usb_present) {
-        lv_canvas_draw_rect(canvas, 1, 2, 3, 5, &rect_fill_dsc);
-    } else if (level <= 30) {
-        lv_canvas_draw_rect(canvas, 1, 2, 3, 4, &rect_fill_dsc);
-    } else if (level <= 50) {
-        lv_canvas_draw_rect(canvas, 1, 2, 3, 3, &rect_fill_dsc);
-    } else if (level <= 70) {
-        lv_canvas_draw_rect(canvas, 1, 2, 3, 2, &rect_fill_dsc);
-    } else if (level <= 90) {
-        lv_canvas_draw_rect(canvas, 1, 2, 3, 1, &rect_fill_dsc);
+    if (level <= 99)
+    {
+        lv_canvas_draw_rect(canvas, level, 1, 100 - level, 3, &rect_fill_dsc);
+        lv_canvas_set_px(canvas, 100, 1, lv_color_white());
+        lv_canvas_set_px(canvas, 100, 2, lv_color_white());
+        lv_canvas_set_px(canvas, 100, 3, lv_color_white());
     }
+    
 }
 
 static void set_battery_symbol(lv_obj_t *widget, struct battery_state state) {
@@ -80,15 +74,11 @@ static void set_battery_symbol(lv_obj_t *widget, struct battery_state state) {
     draw_battery(symbol, state.level, state.usb_present);
     lv_label_set_text_fmt(label, "%4u%%", state.level);
     
-    if (state.level > 0 || state.usb_present) {
-        lv_obj_clear_flag(symbol, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_move_foreground(symbol);
-        lv_obj_clear_flag(label, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_move_foreground(label);
-    } else {
-        lv_obj_add_flag(symbol, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
-    }
+    lv_obj_clear_flag(symbol, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(symbol);
+    lv_obj_clear_flag(label, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(label);
+
 }
 
 void battery_status_update_cb(struct battery_state state) {
@@ -147,7 +137,7 @@ int zmk_widget_dongle_battery_status_init(struct zmk_widget_dongle_battery_statu
         lv_obj_t *image_canvas = lv_canvas_create(widget->obj);
         lv_obj_t *battery_label = lv_label_create(widget->obj);
 
-        lv_canvas_set_buffer(image_canvas, battery_image_buffer[i], 5, 8, LV_IMG_CF_TRUE_COLOR);
+        lv_canvas_set_buffer(image_canvas, battery_image_buffer[i], 102, 5, LV_IMG_CF_TRUE_COLOR);
 
         lv_obj_align(image_canvas, LV_ALIGN_BOTTOM_MID, -60 +(i * 120), -8);
         lv_obj_align(battery_label, LV_ALIGN_TOP_MID, -60 +(i * 120), 0);
