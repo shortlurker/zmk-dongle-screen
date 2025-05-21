@@ -96,3 +96,4 @@ disp_spi: &spi3 {
   pinctrl-1 = <&pwm1_sleep>;
   pinctrl-names = "default", "sleep";
 };
+
