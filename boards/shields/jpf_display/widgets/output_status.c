@@ -48,21 +48,26 @@ static void set_status_symbol(struct zmk_widget_output_status *widget, struct ou
     const char *ble_color = "ffffff";
     const char *usb_color = "ffffff";
     char transport_text[50] = {};
-    if (state.usb_is_hid_ready == 0) {
+    if (state.usb_is_hid_ready == 0)
+    {
         usb_color = "ff0000";
-    } else {
+    }
+    else
+    {
         usb_color = "ffffff";
     }
-    
-    if (state.active_profile_connected== 1)
+
+    if (state.active_profile_connected == 1)
     {
-        ble_color= "00ff00";
-    } else if (state.active_profile_bonded== 1)
+        ble_color = "00ff00";
+    }
+    else if (state.active_profile_bonded == 1)
     {
-        ble_color= "0000ff";
-    } else
+        ble_color = "0000ff";
+    }
+    else
     {
-        ble_color= "ffffff";
+        ble_color = "ffffff";
     }
 
     switch (state.selected_endpoint.transport)
@@ -75,16 +80,13 @@ static void set_status_symbol(struct zmk_widget_output_status *widget, struct ou
         break;
     }
 
-    
     lv_label_set_recolor(widget->transport_label, true);
     lv_obj_set_style_text_align(widget->transport_label, LV_TEXT_ALIGN_RIGHT, 0);
     lv_label_set_text(widget->transport_label, transport_text);
 
-    
-
     char ble_text[12];
 
-    snprintf(ble_text, sizeof(ble_text), "%d", state.active_profile_index);
+    snprintf(ble_text, sizeof(ble_text), "%d", state.active_profile_index + 1);
     // lv_obj_set_style_text_align(widget->ble_label, LV_TEXT_ALIGN_RIGHT, 0);
     lv_label_set_text(widget->ble_label, ble_text);
 }
