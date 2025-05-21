@@ -45,27 +45,33 @@ static struct output_status_state get_state(const zmk_event_t *_eh)
 
 static void set_status_symbol(struct zmk_widget_output_status *widget, struct output_status_state state)
 {
-    const char *transport_ble_color = "ffffff";
+    const char *ble_color = "ffffff";
+    const char *usb_color = "ffffff";
     char transport_text[50] = {};
-
+    if (state.usb_is_hid_ready == 0) {
+        usb_color = "ff0000";
+    } else {
+        usb_color = "ffffff";
+    }
+    
     if (state.active_profile_connected== 1)
     {
-        transport_ble_color= "00ff00";
+        ble_color= "00ff00";
     } else if (state.active_profile_bonded== 1)
     {
-        transport_ble_color= "0000ff";
+        ble_color= "0000ff";
     } else
     {
-        transport_ble_color= "ffffff";
+        ble_color= "ffffff";
     }
 
     switch (state.selected_endpoint.transport)
     {
     case ZMK_TRANSPORT_USB:
-        snprintf(transport_text, sizeof(transport_text), "> USB\n#%s BLE#", transport_ble_color);
+        snprintf(transport_text, sizeof(transport_text), "> #%s USB#\n#%s BLE#", usb_color, ble_color);
         break;
     case ZMK_TRANSPORT_BLE:
-        snprintf(transport_text, sizeof(transport_text), "USB\n> #%s BLE#", transport_ble_color);
+        snprintf(transport_text, sizeof(transport_text), "#%s USB#\n> #%s BLE#", usb_color, ble_color);
         break;
     }
 
@@ -102,7 +108,7 @@ ZMK_SUBSCRIPTION(widget_output_status, zmk_usb_conn_state_changed);
 int zmk_widget_output_status_init(struct zmk_widget_output_status *widget, lv_obj_t *parent)
 {
     widget->obj = lv_obj_create(parent);
-    lv_obj_set_size(widget->obj, 240, 60);
+    lv_obj_set_size(widget->obj, 240, 77);
 
     widget->transport_label = lv_label_create(widget->obj);
     lv_obj_align(widget->transport_label, LV_ALIGN_TOP_RIGHT, -10, 10);
