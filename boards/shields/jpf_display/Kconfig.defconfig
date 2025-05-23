@@ -67,15 +67,19 @@ config LED
 
 config DISPLAY_IDLE_TIMEOUT_S
     int "Display idle timeout in seconds (0 = never off)"
-    default 30
+    default 600
     help
       Time in seconds after which the display turns off when idle. 0 = never off.
 
-config DISPLAY_INITIAL_BRIGHTNESS
-    int "Initiale Display-Helligkeit (1-100)"
-    default 10
+config DISPLAY_MAX_BRIGHTNESS
+    int "Maximum display brightness (1-100)"
+    default 80
     range 1 100
-    help
-      Starthelligkeit des Displays nach dem Booten (1 = dunkel, 100 = maximal).
+
+config DISPLAY_MIN_BRIGHTNESS
+    int "Minimum display brightness (0-99, 0 = off)"
+    default 0
+    range 0 99
+
 
 endif

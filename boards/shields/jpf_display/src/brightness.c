@@ -7,12 +7,8 @@
 
 LOG_MODULE_REGISTER(als, 4);
 
-#ifndef CONFIG_DISPLAY_IDLE_TIMEOUT_S
-#define CONFIG_DISPLAY_IDLE_TIMEOUT_S 30
-#endif
-
-#ifndef CONFIG_DISPLAY_INITIAL_BRIGHTNESS
-#define CONFIG_DISPLAY_INITIAL_BRIGHTNESS 10
+#if CONFIG_DISPLAY_MIN_BRIGHTNESS > CONFIG_DISPLAY_MAX_BRIGHTNESS
+#error "DISPLAY_MIN_BRIGHTNESS must be less than or equal to DISPLAY_MAX_BRIGHTNESS!"
 #endif
 
 #define BRIGHTNESS_STEP 2
@@ -25,15 +21,15 @@ static const struct device *pwm_leds_dev = DEVICE_DT_GET_ONE(pwm_leds);
 
 static int64_t last_activity = 0;
 static bool display_on = true;
-static uint8_t last_brightness = CONFIG_DISPLAY_INITIAL_BRIGHTNESS;
+static uint8_t max_brightness = CONFIG_DISPLAY_MAX_BRIGHTNESS;
+static uint8_t min_brightness = CONFIG_DISPLAY_MIN_BRIGHTNESS;
 
 void set_display_brightness(uint8_t value)
 {
-    if (value > 100)
-        value = 100;
-    if (value < 1)
-        value = 1;
-    last_brightness = value;
+    if (value > max_brightness)
+        value = max_brightness;
+    if (value < min_brightness)
+        value = min_brightness;
     led_set_brightness(pwm_leds_dev, DISP_BL, value);
     LOG_INF("Display brightness set to %d", value);
 }
@@ -44,25 +40,43 @@ static void display_set_on(bool on)
 {
     if (on && !display_on)
     {
-        // Smooth fade-in
-        for (uint8_t b = 0; b <= last_brightness; b += BRIGHTNESS_STEP)
+        uint8_t start = min_brightness;
+        if (start > max_brightness)
+            start = 0;
+        if (start == max_brightness)
         {
-            led_set_brightness(pwm_leds_dev, DISP_BL, b);
-            k_msleep(BRIGHTNESS_DELAY_MS);
+            led_set_brightness(pwm_leds_dev, DISP_BL, max_brightness);
         }
-        led_set_brightness(pwm_leds_dev, DISP_BL, last_brightness); // Ensure target value
+        else
+        {
+            for (uint8_t b = start; b < max_brightness; b += BRIGHTNESS_STEP)
+            {
+                led_set_brightness(pwm_leds_dev, DISP_BL, b);
+                k_msleep(BRIGHTNESS_DELAY_MS);
+            }
+            led_set_brightness(pwm_leds_dev, DISP_BL, max_brightness); // Ensure target value
+        }
         display_on = true;
         LOG_INF("Display on (smooth)");
     }
     else if (!on && display_on)
     {
-        // Smooth fade-out
-        for (int b = last_brightness; b >= 0; b -= BRIGHTNESS_STEP)
+        uint8_t end = min_brightness;
+        if (end > max_brightness)
+            end = 0;
+        if (end == max_brightness)
         {
-            led_set_brightness(pwm_leds_dev, DISP_BL, b);
-            k_msleep(BRIGHTNESS_DELAY_MS);
+            led_set_brightness(pwm_leds_dev, DISP_BL, end);
         }
-        led_set_brightness(pwm_leds_dev, DISP_BL, 0); // Ensure target value
+        else
+        {
+            for (int b = max_brightness; b > end; b -= BRIGHTNESS_STEP)
+            {
+                led_set_brightness(pwm_leds_dev, DISP_BL, b);
+                k_msleep(BRIGHTNESS_DELAY_MS);
+            }
+            led_set_brightness(pwm_leds_dev, DISP_BL, end); // Ensure target value
+        }
         display_on = false;
         LOG_INF("Display off (smooth)");
     }
@@ -119,10 +133,10 @@ ZMK_SUBSCRIPTION(display_idle, zmk_keycode_state_changed);
 
 #endif // CONFIG_DISPLAY_IDLE_TIMEOUT_S > 0
 
-// Set initial brightness at system startup
+// Set max brightness at system startup
 static int init_fixed_brightness(void)
 {
-    set_display_brightness(last_brightness);
+    set_display_brightness(max_brightness);
     last_activity = k_uptime_get();
 #if CONFIG_DISPLAY_IDLE_TIMEOUT_S > 0
     // Wake up the idle thread at boot
