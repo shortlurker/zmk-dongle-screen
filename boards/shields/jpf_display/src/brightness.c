@@ -145,7 +145,7 @@ static void increase_brightness(void)
 {
     if (user_brightness < max_brightness)
     {
-        set_display_brightness(user_brightness + 10);
+        set_display_brightness(user_brightness + CONFIG_DISPLAY_BRIGHTNESS_STEP);
     }
 }
 
@@ -153,7 +153,7 @@ static void decrease_brightness(void)
 {
     if (user_brightness > min_brightness)
     {
-        int16_t new_brightness = user_brightness - 10;
+        int16_t new_brightness = user_brightness - CONFIG_DISPLAY_BRIGHTNESS_STEP;
         if (new_brightness < min_brightness)
         {
             new_brightness = min_brightness;

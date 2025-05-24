@@ -99,5 +99,10 @@ config DISPLAY_BRIGHTNESS_DOWN_KEYCODE
     help
       Keycode that decreases the display brightness (default: F24).
 
+config DISPLAY_BRIGHTNESS_STEP
+    int "Step for brightness adjustment with keyboard"
+    default 10
+    help
+      How much brightness steps (range MIN_BRIGHTNESS to MAX_BRIGHTNESS) should be applied per keystroke
 
 endif
