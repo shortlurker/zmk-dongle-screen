@@ -81,5 +81,23 @@ config DISPLAY_MIN_BRIGHTNESS
     default 0
     range 0 99
 
+config DISPLAY_BRIGHTNESS_KEYBOARD_CONTROL
+    bool "Control display brightness via keyboard"
+    default y
+    help
+      Allows controlling the display brightness via keyboard (e.g. F23/F24).
+
+config DISPLAY_BRIGHTNESS_UP_KEYCODE
+    int "Keycode for increasing display brightness"
+    default 115  # KC_F24
+    help
+      Keycode that increases the display brightness (default: F23).
+
+config DISPLAY_BRIGHTNESS_DOWN_KEYCODE
+    int "Keycode for decreasing display brightness"
+    default 114  # KC_F23
+    help
+      Keycode that decreases the display brightness (default: F24).
+
 
 endif

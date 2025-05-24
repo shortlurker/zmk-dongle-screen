@@ -13,77 +13,96 @@ LOG_MODULE_REGISTER(als, 4);
 
 #define BRIGHTNESS_STEP 2
 #define BRIGHTNESS_DELAY_MS 10
-
 #define DISPLAY_IDLE_TIMEOUT_MS (CONFIG_DISPLAY_IDLE_TIMEOUT_S * 1000)
 
 static const struct device *pwm_leds_dev = DEVICE_DT_GET_ONE(pwm_leds);
 #define DISP_BL DT_NODE_CHILD_IDX(DT_NODELABEL(disp_bl))
 
 static int64_t last_activity = 0;
-static bool display_on = true;
 static uint8_t max_brightness = CONFIG_DISPLAY_MAX_BRIGHTNESS;
 static uint8_t min_brightness = CONFIG_DISPLAY_MIN_BRIGHTNESS;
+static uint8_t user_brightness = CONFIG_DISPLAY_MAX_BRIGHTNESS;
 
-void set_display_brightness(uint8_t value)
+static uint8_t clamp_brightness(uint8_t value)
 {
     if (value > max_brightness)
-        value = max_brightness;
+    {
+        return max_brightness;
+        LOG_WRN("CLAMPED: Display brightness %d would be over %d", value, max_brightness);
+    }
     if (value < min_brightness)
-        value = min_brightness;
+    {
+        LOG_WRN("CLAMPED: Display brightness %d would be under %d", value, min_brightness);
+        return min_brightness;
+    }
+    return value;
+}
+static void apply_brightness(uint8_t value)
+{
     led_set_brightness(pwm_leds_dev, DISP_BL, value);
     LOG_INF("Display brightness set to %d", value);
 }
 
-#if CONFIG_DISPLAY_IDLE_TIMEOUT_S > 0
+void set_display_brightness(uint8_t value)
+{
+    user_brightness = clamp_brightness(value);
+    apply_brightness(user_brightness);
+}
+
+#if CONFIG_DISPLAY_IDLE_TIMEOUT_S > 0 || CONFIG_DISPLAY_BRIGHTNESS_KEYBOARD_CONTROL
+// --- Brightness logic ---
+static bool display_on = true;
+
+static void fade_to_brightness(uint8_t from, uint8_t to)
+{
+    if (from == to)
+    {
+        apply_brightness(to);
+        return;
+    }
+    if (from < to)
+    {
+        for (uint8_t b = from; b < to; b += BRIGHTNESS_STEP)
+        {
+            apply_brightness(b);
+            k_msleep(BRIGHTNESS_DELAY_MS);
+        }
+    }
+    else
+    {
+        for (int b = from; b > to; b -= BRIGHTNESS_STEP)
+        {
+            apply_brightness(b);
+            k_msleep(BRIGHTNESS_DELAY_MS);
+        }
+    }
+    apply_brightness(to);
+}
+
+// --- Display on/off ---
 
 static void display_set_on(bool on)
 {
     if (on && !display_on)
     {
-        uint8_t start = min_brightness;
-        if (start > max_brightness)
-            start = 0;
-        if (start == max_brightness)
-        {
-            led_set_brightness(pwm_leds_dev, DISP_BL, max_brightness);
-        }
-        else
-        {
-            for (uint8_t b = start; b < max_brightness; b += BRIGHTNESS_STEP)
-            {
-                led_set_brightness(pwm_leds_dev, DISP_BL, b);
-                k_msleep(BRIGHTNESS_DELAY_MS);
-            }
-            led_set_brightness(pwm_leds_dev, DISP_BL, max_brightness); // Ensure target value
-        }
+        fade_to_brightness(min_brightness, user_brightness);
         display_on = true;
         LOG_INF("Display on (smooth)");
     }
     else if (!on && display_on)
     {
-        uint8_t end = min_brightness;
-        if (end > max_brightness)
-            end = 0;
-        if (end == max_brightness)
-        {
-            led_set_brightness(pwm_leds_dev, DISP_BL, end);
-        }
-        else
-        {
-            for (int b = max_brightness; b > end; b -= BRIGHTNESS_STEP)
-            {
-                led_set_brightness(pwm_leds_dev, DISP_BL, b);
-                k_msleep(BRIGHTNESS_DELAY_MS);
-            }
-            led_set_brightness(pwm_leds_dev, DISP_BL, end); // Ensure target value
-        }
+        fade_to_brightness(user_brightness, min_brightness);
         display_on = false;
         LOG_INF("Display off (smooth)");
     }
 }
 
-// Idle thread: checks for inactivity and turns off the display after the configured timeout.
-// To save resources, the thread sleeps exactly as long as needed until the next timeout or activity.
+#endif
+
+// --- Idle thread ---
+
+#if CONFIG_DISPLAY_IDLE_TIMEOUT_S > 0
+
 void display_idle_thread(void)
 {
     while (1)
@@ -116,27 +135,89 @@ void display_idle_thread(void)
 
 K_THREAD_DEFINE(display_idle_tid, 512, display_idle_thread, NULL, NULL, NULL, 7, 0, 0);
 
-// Only register the event listener if timeout is enabled
+#endif // CONFIG_DISPLAY_IDLE_TIMEOUT_S > 0
+
+// --- Brightness control via keyboard ---
+
+#if CONFIG_DISPLAY_BRIGHTNESS_KEYBOARD_CONTROL
+
+static void increase_brightness(void)
+{
+    if (user_brightness < max_brightness)
+    {
+        set_display_brightness(user_brightness + 10);
+    }
+}
+
+static void decrease_brightness(void)
+{
+    if (user_brightness > min_brightness)
+    {
+        int16_t new_brightness = user_brightness - 10;
+        if (new_brightness < min_brightness)
+        {
+            new_brightness = min_brightness;
+        }
+        set_display_brightness((uint8_t)new_brightness);
+    }
+}
+
+#endif // CONFIG_DISPLAY_BRIGHTNESS_KEYBOARD_CONTROL
+
+#if CONFIG_DISPLAY_IDLE_TIMEOUT_S > 0 || CONFIG_DISPLAY_BRIGHTNESS_KEYBOARD_CONTROL
+
+// --- Key event listener ---
+
 static int key_listener(const zmk_event_t *eh)
 {
+    const struct zmk_keycode_state_changed *ev = as_zmk_keycode_state_changed(eh);
+    if (ev && ev->state)
+    { // Only on key down
+        LOG_INF("Key pressed: keycode=%d", ev->keycode);
+
+#if CONFIG_DISPLAY_BRIGHTNESS_KEYBOARD_CONTROL
+        if (ev->keycode == CONFIG_DISPLAY_BRIGHTNESS_UP_KEYCODE)
+        {
+            LOG_INF("Brightness UP key recognized!");
+            increase_brightness();
+            return 0;
+        }
+        else if (ev->keycode == CONFIG_DISPLAY_BRIGHTNESS_DOWN_KEYCODE)
+        {
+            LOG_INF("Brightness DOWN key recognized!");
+            decrease_brightness();
+            return 0;
+        }
+#endif
+    }
+
+#if CONFIG_DISPLAY_IDLE_TIMEOUT_S > 0
     last_activity = k_uptime_get();
     if (!display_on)
     {
         display_set_on(true);
-        k_wakeup(display_idle_tid); // Wake up the idle thread after re-enabling display
+        k_wakeup(display_idle_tid);
     }
+#else
+    // Without idle thread: just turn on display
+    if (!display_on)
+    {
+        display_set_on(true);
+    }
+#endif
     return 0;
 }
 
 ZMK_LISTENER(display_idle, key_listener);
 ZMK_SUBSCRIPTION(display_idle, zmk_keycode_state_changed);
 
-#endif // CONFIG_DISPLAY_IDLE_TIMEOUT_S > 0
+#endif
 
-// Set max brightness at system startup
+// --- Initialization ---
+
 static int init_fixed_brightness(void)
 {
-    set_display_brightness(max_brightness);
+    set_display_brightness(user_brightness);
     last_activity = k_uptime_get();
 #if CONFIG_DISPLAY_IDLE_TIMEOUT_S > 0
     // Wake up the idle thread at boot
