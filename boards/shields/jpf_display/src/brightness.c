@@ -4,6 +4,7 @@
 #include <zephyr/logging/log.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/keycode_state_changed.h>
+#include <zmk/events/layer_state_changed.h>
 
 LOG_MODULE_REGISTER(als, 4);
 
@@ -210,6 +211,7 @@ static int key_listener(const zmk_event_t *eh)
 
 ZMK_LISTENER(display_idle, key_listener);
 ZMK_SUBSCRIPTION(display_idle, zmk_keycode_state_changed);
+ZMK_SUBSCRIPTION(display_idle, zmk_layer_state_changed);
 
 #endif
 
