@@ -1,7 +1,7 @@
 # Copyright (c) 2024 The ZMK Contributors
 # SPDX-License-Identifier: MIT
 
-if SHIELD_JPF_ADAPTER
+if SHIELD_DONGLE_SCREEN
 
 choice ZMK_DISPLAY_STATUS_SCREEN
     default ZMK_DISPLAY_STATUS_SCREEN_CUSTOM
@@ -68,41 +68,53 @@ config PWM
 config LED
     default y
 
-config DISPLAY_IDLE_TIMEOUT_S
-    int "Display idle timeout in seconds (0 = never off)"
+config DONGLE_SCREEN_HORIZONTAL
+    bool "Screen orientation"
+    default y
+    help
+      Orientation of the screen. In default it is horizontal (laying on the side)
+
+config DONGLE_SCREEN_FLIPPED
+    bool "Screen flip option"
+    default n
+    help
+      Should the screen orientation should be flipped in horizontal or vertical orientation?
+
+config DONGLE_SCREEN_IDLE_TIMEOUT_S
+    int "Screen idle timeout in seconds (0 = never off)"
     default 600
     help
-      Time in seconds after which the display turns off when idle. 0 = never off.
+      Time in seconds after which the screen turns off when idle. 0 = never off.
 
-config DISPLAY_MAX_BRIGHTNESS
-    int "Maximum display brightness (1-100)"
+config DONGLE_SCREEN_MAX_BRIGHTNESS
+    int "Maximum screen brightness (1-100)"
     default 80
     range 1 100
 
-config DISPLAY_MIN_BRIGHTNESS
-    int "Minimum display brightness (0-99, 0 = off)"
+config DONGLE_SCREEN_MIN_BRIGHTNESS
+    int "Minimum screen brightness (0-99, 0 = off)"
     default 0
     range 0 99
 
-config DISPLAY_BRIGHTNESS_KEYBOARD_CONTROL
-    bool "Control display brightness via keyboard"
+config DONGLE_SCREEN_BRIGHTNESS_KEYBOARD_CONTROL
+    bool "Control screen brightness via keyboard"
     default y
     help
-      Allows controlling the display brightness via keyboard (e.g. F23/F24).
+      Allows controlling the screen brightness via keyboard (e.g. F23/F24).
 
-config DISPLAY_BRIGHTNESS_UP_KEYCODE
-    int "Keycode for increasing display brightness"
+config DONGLE_SCREEN_BRIGHTNESS_UP_KEYCODE
+    int "Keycode for increasing screen brightness"
     default 115  # KC_F24
     help
-      Keycode that increases the display brightness (default: F23).
+      Keycode that increases the screen brightness (default: F23).
 
-config DISPLAY_BRIGHTNESS_DOWN_KEYCODE
-    int "Keycode for decreasing display brightness"
+config DONGLE_SCREEN_BRIGHTNESS_DOWN_KEYCODE
+    int "Keycode for decreasing screen brightness"
     default 114  # KC_F23
     help
-      Keycode that decreases the display brightness (default: F24).
+      Keycode that decreases the screen brightness (default: F24).
 
-config DISPLAY_BRIGHTNESS_STEP
+config DONGLE_SCREEN_BRIGHTNESS_STEP
     int "Step for brightness adjustment with keyboard"
     default 10
     help

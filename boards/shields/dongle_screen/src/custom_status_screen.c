@@ -50,7 +50,6 @@ lv_obj_t *zmk_display_status_screen()
 
     zmk_widget_mod_status_init(&mod_widget, screen);
     lv_obj_align(zmk_widget_mod_status_obj(&mod_widget), LV_ALIGN_CENTER, 0, 35);
-    LOG_INF("screen loaded!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
     return screen;
 }

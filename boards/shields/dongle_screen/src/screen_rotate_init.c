@@ -11,13 +11,21 @@ int disp_set_orientation(void)
 	{
 		return -EIO;
 	}
-	LOG_INF("INIT loaded!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
-#ifdef CONFIG_PROSPECTOR_ROTATE_DISPLAY_180 // TODO Change
+#ifdef CONFIG_DONGLE_SCREEN_HORIZONTAL
+#ifdef CONFIG_DONGLE_SCREEN_FLIPPED
 	int ret = display_set_orientation(display, DISPLAY_ORIENTATION_ROTATED_90);
 #else
 	int ret = display_set_orientation(display, DISPLAY_ORIENTATION_ROTATED_270);
 #endif
+#else
+#ifdef CONFIG_DONGLE_SCREEN_FLIPPED
+	int ret = display_set_orientation(display, DISPLAY_ORIENTATION_NORMAL);
+#else
+	int ret = display_set_orientation(display, DISPLAY_ORIENTATION_ROTATED_180);
+#endif
+#endif
+
 	if (ret < 0)
 	{
 		return ret;

@@ -1,2 +1,0 @@
-config SHIELD_JPF_ADAPTER
-    def_bool $(shields_list_contains,jpf_display)

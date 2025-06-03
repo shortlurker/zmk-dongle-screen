@@ -1,4 +1,4 @@
-name: jpf_display
+name: dongle_screen
 build:
   cmake: .
   kconfig: Kconfig
