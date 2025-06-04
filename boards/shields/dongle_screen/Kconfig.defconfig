@@ -90,11 +90,15 @@ config DONGLE_SCREEN_MAX_BRIGHTNESS
     int "Maximum screen brightness (1-100)"
     default 80
     range 1 100
+    help
+        This is the brightness which is used when the dongle is powered on. This is also the maximum brightness used by the dimmer.
 
 config DONGLE_SCREEN_MIN_BRIGHTNESS
     int "Minimum screen brightness (0-99, 0 = off)"
     default 0
     range 0 99
+    help
+        This is also the brightness which is used by the automatic dimmer. If greater than 0 the screen would not turn off completly.
 
 config DONGLE_SCREEN_BRIGHTNESS_KEYBOARD_CONTROL
     bool "Control screen brightness via keyboard"
