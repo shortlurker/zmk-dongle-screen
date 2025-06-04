@@ -1,12 +1,16 @@
 # ZMK Dongle Screen
 
-This project provides a Zephyr module for a dongle display shield based on the ST7789V display and the Seeeduino XAIO BLE microcontroller and the LVGL graphics library. It offers various widgets for current output, displaying layer, mod, WPM, and battery status, as well as brightness adjustments via keyboard, automatic dimming after inactivity and a customizable status screen for ZMK-based keyboards.
+This project provides a Zephyr module for a dongle display shield based on the ST7789V display and the Seeeduino XAIO BLE microcontroller and the LVGL graphics library. It offers various widgets for current output, displaying layer, mod, WPM, and battery status, as well as brightness adjustments via keyboard, automatic dimming after inactivity, and a customizable status screen for ZMK-based keyboards.
 
 **This project is inspired by [prospector-zmk-module](https://github.com/carrefinho/prospector-zmk-module) and [zmk-dongle-display](https://github.com/englmaxi/zmk-dongle-display). Thanks for your awesome work!**
 
+## Demo
+
+Demonstration videos of the screen are included soon.
+
 ## Building a dongle
 
-For building an dongle for youself you can use the build guide by **carrefinho** [prospector project](https://github.com/carrefinho/prospector)
+To build a dongle yourself you can use the build guide by **carrefinho** ([prospector project](https://github.com/carrefinho/prospector)).  
 This repository only contains a module and no build guides or suggestions.
 
 ## Widgets Overview
@@ -43,14 +47,14 @@ This module provides several widgets to visualize the current state of your ZMK-
   Combine and arrange widgets as you like for a fully customizable status display. (Code changes and recompiling are needed for this.)
 
 - **Brightness Control**  
-  Adjust the display brightness via keyboard shortcuts. In the default F23 and F24 is mapped to this. You'll just have to assign this in your keyboard keymap.
+  Adjust the display brightness via keyboard shortcuts. By default, F23 and F24 are mapped to this. You'll just have to assign this in your keyboard keymap.
 
 - **Configurable Display Orientation**  
-  Set the screen orientation to match your keyboard or desk setup (horizontal or vertical). Additional the screen can be flipped to match the orientation of the display in your casing.
+  Set the screen orientation to match your keyboard or desk setup (horizontal or vertical). Additionally, the screen can be flipped to match the orientation of the display in your casing.
 
 - **Idle Timeout**  
-  Automatically turns off or dimms the display after a configurable period of inactivity (no keystrokes). It automatically turns on when the first keystroke is recognized again.
-  The idle timeout can be set in seconds. If set to `0`, the display will never dim automatically.  
+  Automatically turns off or dims the display after a configurable period of inactivity (no keystrokes). It automatically turns on when the first keystroke is detected again.  
+  The idle timeout can be set in seconds. If set to `0`, the display will never dim or turn off automatically.  
   When the idle timeout is reached, the display brightness will be set to the value defined in `DONGLE_SCREEN_MIN_BRIGHTNESS`.  
   When activity resumes, the brightness will be restored to the last value (up to `DONGLE_SCREEN_MAX_BRIGHTNESS`).  
   Make sure that `DONGLE_SCREEN_MIN_BRIGHTNESS` is set to a value that is visible enough for your use case (0 means the display is completely off).
@@ -111,7 +115,7 @@ This module provides several widgets to visualize the current state of your ZMK-
 
 ### Configuration sample
 
-A sample `build.yaml`based on `seeeduino_xiao_ble` boards for the keyboard and the dongle including a `settings_reset`firmware could look like this:
+A sample `build.yaml` based on `seeeduino_xiao_ble` boards for the keyboard and the dongle including a `settings_reset` firmware could look like this:
 
 ```yaml
 include:
@@ -163,7 +167,7 @@ CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP=5
 
 ## Development
 
-If you want to develop new features or change the layout of the screen you'll have to clone this repo and build it on your own.
+If you want to develop new features or change the layout of the screen you'll have to clone this repo and build it on your own.  
 Refer to the [ZMK Local toolchain](https://zmk.dev/docs/development/local-toolchain/build-flash) documentation for this.
 
 A command for building locally *can* look something like this:
@@ -172,7 +176,7 @@ A command for building locally *can* look something like this:
 west build -p -s /workspaces/zmk/app -d "/workspaces/zmk-build-output/totem_dongle" -b "seeeduino_xiao_ble" -S zmk-usb-logging -- -DZMK_CONFIG=/workspaces/zmk-config/config -DSHIELD="totem_dongle dongle_screen" -DZMK_EXTRA_MODULES=/workspaces/zmk-modules/zmk-dongle-screen/
 ```
 
-*Note: a matching entry for -DSHIELD must be already present in your `build.yaml`in your configuration which is given as the `-DZMK_CONFIG` argument*
+*Note: a matching entry for `-DSHIELD` must already be present in your `build.yaml` in your configuration, which is given as the `-DZMK_CONFIG` argument.*
 
 ## License
 
