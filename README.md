@@ -6,6 +6,8 @@ This project provides a Zephyr module for a dongle display shield based on the S
 
 ## Demo
 
+![Sample Screen of zmk-dongle-screen](/docs/images/screen.jpg)
+
 Demonstration videos of the screen are included soon.
 
 ## Building a dongle
