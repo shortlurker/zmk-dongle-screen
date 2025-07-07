@@ -8,11 +8,7 @@ This project provides a Zephyr module for a dongle display shield based on the S
 
 ![Sample Screen of zmk-dongle-screen](/docs/images/screen.jpg)
 
-
-
-https://github.com/user-attachments/assets/86c33af6-d83e-4e2a-9766-fc8836e896f1
-
-
+<https://github.com/user-attachments/assets/86c33af6-d83e-4e2a-9766-fc8836e896f1>
 
 ## Building a dongle
 
@@ -87,6 +83,16 @@ This module provides several widgets to visualize the current state of your ZMK-
          revision: main
      self:
        path: config
+   ```
+
+   Note: If you want to pin the release of `zmk-dongle-screen` or `zmk` in general you can update the `revision` to use a tag or commit SHA.
+  
+   Example for using `zmk-dongle-screen` version 0.0.1:
+
+   ```yaml
+   - name: zmk-dongle-screen
+     remote: janpfischer
+     revision: 0.0.1
    ```
 
 3. The shield must be included in your build configuration for the dongle you set up in step 1.  
