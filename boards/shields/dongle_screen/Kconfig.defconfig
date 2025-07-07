@@ -124,4 +124,33 @@ config DONGLE_SCREEN_BRIGHTNESS_STEP
     help
       How much brightness steps (range MIN_BRIGHTNESS to MAX_BRIGHTNESS) should be applied per keystroke
 
+config DONGLE_SCREEN_WPM_ACTIVE
+    bool "WPM Widget active"
+    default y
+    help
+      If the WPM Widget should be active or not
+
+config DONGLE_SCREEN_MODIFIER_ACTIVE
+    bool "Modifier Widget active"
+    default y
+    help
+      If the Modifier Widget should be active or not
+
+config DONGLE_SCREEN_LAYER_ACTIVE
+    bool "Layer Widget active"
+    default y
+    help
+      If the Layer Widget should be active or not
+
+config DONGLE_SCREEN_OUTPUT_ACTIVE
+    bool "Output Widget active"
+    default y
+    help
+      If the Output Widget should be active or not
+
+config DONGLE_SCREEN_BATTERY_ACTIVE
+    bool "Battery Widget active"
+    default y
+    help
+      If the Battery Widget should be active or not
 endif

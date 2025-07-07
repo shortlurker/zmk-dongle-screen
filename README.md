@@ -47,6 +47,9 @@ This module provides several widgets to visualize the current state of your ZMK-
 - **Custom Status Screen**  
   Combine and arrange widgets as you like for a fully customizable status display. (Code changes and recompiling are needed for this.)
 
+- **Deactivate Screen Modules via configuration**  
+  If you don't need a specific module to be shown (like WPM) you can simple disable them via configuration. No code changes are needed for this.
+
 - **Brightness Control**  
   Adjust the display brightness via keyboard shortcuts. By default, F23 and F24 are mapped to this. You'll just have to assign this in your keyboard keymap.
 
@@ -161,6 +164,11 @@ include:
 | `DONGLE_SCREEN_BRIGHTNESS_UP_KEYCODE`       | int  | 115     | Keycode for increasing screen brightness (default: F24).                                                                                                         |
 | `DONGLE_SCREEN_BRIGHTNESS_DOWN_KEYCODE`     | int  | 114     | Keycode for decreasing screen brightness (default: F23).                                                                                                         |
 | `DONGLE_SCREEN_BRIGHTNESS_STEP`             | int  | 10      | Step for brightness adjustment with keyboard. How much brightness (range MIN_BRIGHTNESS to MAX_BRIGHTNESS) should be applied per keystroke.                      |
+| `DONGLE_SCREEN_WPM_ACTIVE`                  | bool | y       | If the WPM Widget should be active or not.                                                                                                                       |
+| `DONGLE_SCREEN_MODIFIER_ACTIVE`             | bool | y       | If the Modifier Widget should be active or not.                                                                                                                  |
+| `DONGLE_SCREEN_LAYER_ACTIVE`                | bool | y       | If the Layer Widget should be active or not.                                                                                                                     |
+| `DONGLE_SCREEN_OUTPUT_ACTIVE`               | bool | y       | If the Output Widget should be active or not.                                                                                                                    |
+| `DONGLE_SCREEN_BATTERY_ACTIVE`              | bool | y       | If the Battery Widget should be active or not.                                                                                                                   |
 
 ## Example Configuration (`prj.conf`)
 
