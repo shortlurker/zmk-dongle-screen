@@ -65,6 +65,9 @@ This module provides several widgets to visualize the current state of your ZMK-
 
 ## Installation
 
+**IMPORTANT NOTICE**  
+As of July 2025 this module is not compatible with the lastest ZMK release v0.2.1 because this is missing a [commit](https://github.com/zmkfirmware/zmk/commit/147c340c6e8d377304acfdd64dc86cf83ebdfef2) which added dependencies needed for this module. Please make sure to at least pin your `zmk` `revision: ` to commit sha `147c340c6e8d377304acfdd64dc86cf83ebdfef2` or `main` (which might not be advised anymore by the ZMK team. More [information here](https://zmk.dev/blog/2025/06/20/pinned-zmk).)
+
 1. This guide assumes that you have already implemented a basic dongle setup as described [here](https://zmk.dev/docs/development/hardware-integration/dongle).
 2. Once this is done, add this repository to your `west.yaml`.  
    Example:
@@ -79,7 +82,7 @@ This module provides several widgets to visualize the current state of your ZMK-
      projects:
        - name: zmk
          remote: zmkfirmware
-         revision: main
+         revision: main #or at least 147c340c6e8d377304acfdd64dc86cf83ebdfef2 (see important notice in Installation Guide in the dongle-screen readme)
          import: app/west.yml
        - name: zmk-dongle-screen
          remote: janpfischer
