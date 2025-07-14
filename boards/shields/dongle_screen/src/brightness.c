@@ -1,5 +1,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
+#include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/led.h>
 #include <zephyr/logging/log.h>
 #include <zmk/event_manager.h>
@@ -44,16 +45,6 @@ static void apply_brightness(uint8_t value)
     LOG_INF("Screen brightness set to %d", value);
 }
 
-void set_screen_brightness(uint8_t value)
-{
-    user_brightness = clamp_brightness(value);
-    apply_brightness(user_brightness);
-}
-
-#if CONFIG_DONGLE_SCREEN_IDLE_TIMEOUT_S > 0 || CONFIG_DONGLE_SCREEN_BRIGHTNESS_KEYBOARD_CONTROL
-// --- Brightness logic ---
-static bool screen_on = true;
-
 static void fade_to_brightness(uint8_t from, uint8_t to)
 {
     if (from == to)
@@ -80,6 +71,16 @@ static void fade_to_brightness(uint8_t from, uint8_t to)
     apply_brightness(to);
 }
 
+void set_screen_brightness(uint8_t value)
+{
+    uint8_t new_brightness = clamp_brightness(value);
+    fade_to_brightness(user_brightness, new_brightness);
+    user_brightness = new_brightness;
+}
+
+#if CONFIG_DONGLE_SCREEN_IDLE_TIMEOUT_S > 0 || CONFIG_DONGLE_SCREEN_BRIGHTNESS_KEYBOARD_CONTROL
+// --- Brightness logic ---
+static bool screen_on = true;
 // --- Screen on/off ---
 
 static void screen_set_on(bool on)
@@ -214,6 +215,73 @@ ZMK_SUBSCRIPTION(screen_idle, zmk_keycode_state_changed);
 ZMK_SUBSCRIPTION(screen_idle, zmk_layer_state_changed);
 
 #endif
+
+#if IS_ENABLED(CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT)
+
+const int EVALUATION_INTERVAL = 10000; // 10 seconds
+
+#define AMBIENT_LIGHT_SENSOR_NODE DT_INST(0, avago_apds9960)
+static const struct device *ambient_sensor = DEVICE_DT_GET(AMBIENT_LIGHT_SENSOR_NODE);
+
+// Passe diese Werte nach deinen Messungen an!
+const int32_t min_sensor = 0;
+const int32_t max_sensor = 100; // TODO: Find real values!
+
+static uint8_t ambient_to_brightness(int32_t sensor_value)
+{
+    if (sensor_value < min_sensor)
+        sensor_value = min_sensor;
+    if (sensor_value > max_sensor)
+        sensor_value = max_sensor;
+    uint8_t brightness = min_brightness +
+                         ((sensor_value - min_sensor) * (max_brightness - min_brightness)) /
+                             (max_sensor - min_sensor);
+    return clamp_brightness(brightness);
+}
+
+static void ambient_light_thread(void)
+{
+    struct sensor_value val;
+    uint8_t last_brightness = 0xFF; // Invalid initial value to force first update
+
+    while (1)
+    {
+        // Only adjust brightness if the display is on!
+        if (!screen_on)
+        {
+            k_sleep(K_MSEC(EVALUATION_INTERVAL));
+            continue;
+        }
+
+        if (!device_is_ready(ambient_sensor))
+        {
+            LOG_ERR("Ambient light sensor not ready!");
+            k_sleep(K_SECONDS(5));
+            continue;
+        }
+        int rc = sensor_sample_fetch(ambient_sensor);
+        if (rc == 0)
+        {
+            rc = sensor_channel_get(ambient_sensor, SENSOR_CHAN_LIGHT, &val);
+            if (rc == 0)
+            {
+                LOG_DBG("APDS9960 raw: %d", val.val1); // Logge den Rohwert!
+                uint8_t new_brightness = ambient_to_brightness(val.val1);
+                if (new_brightness != last_brightness)
+                {
+                    set_screen_brightness(new_brightness);
+                    LOG_DBG("Ambient light: %d (raw) -> brightness %d", val.val1, new_brightness);
+                    last_brightness = new_brightness;
+                }
+            }
+        }
+        k_sleep(K_MSEC(EVALUATION_INTERVAL)); // Adjust interval as needed
+    }
+}
+
+K_THREAD_DEFINE(ambient_light_tid, 512, ambient_light_thread, NULL, NULL, NULL, 7, 0, 0);
+
+#endif // CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT
 
 // --- Initialization ---
 
