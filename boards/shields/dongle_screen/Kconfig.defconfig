@@ -153,4 +153,12 @@ config DONGLE_SCREEN_BATTERY_ACTIVE
     default y
     help
       If the Battery Widget should be active or not
+
+config DONGLE_SCREEN_AMBIENT_LIGHT
+    bool "Enable automatic brightness via ambient light sensor"
+    default y
+    select SENSOR
+    select APDS9960
+    help
+      If enabled, the ambient light sensor will be used to automatically adjust screen brightness.
 endif
