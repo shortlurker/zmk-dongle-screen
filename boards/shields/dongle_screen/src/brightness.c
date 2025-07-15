@@ -218,8 +218,6 @@ ZMK_SUBSCRIPTION(screen_idle, zmk_layer_state_changed);
 
 #if IS_ENABLED(CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT)
 
-const int EVALUATION_INTERVAL = 10000; // 10 seconds
-
 #define AMBIENT_LIGHT_SENSOR_NODE DT_INST(0, avago_apds9960)
 static const struct device *ambient_sensor = DEVICE_DT_GET(AMBIENT_LIGHT_SENSOR_NODE);
 
@@ -249,7 +247,7 @@ static void ambient_light_thread(void)
         // Only adjust brightness if the display is on!
         if (!screen_on)
         {
-            k_sleep(K_MSEC(EVALUATION_INTERVAL));
+            k_sleep(K_MSEC(CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_EVALUATION_INTERVAL_MS));
             continue;
         }
 
@@ -275,7 +273,7 @@ static void ambient_light_thread(void)
                 }
             }
         }
-        k_sleep(K_MSEC(EVALUATION_INTERVAL)); // Adjust interval as needed
+        k_sleep(K_MSEC(CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_EVALUATION_INTERVAL_MS)); // Adjust interval as needed
     }
 }
 
