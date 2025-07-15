@@ -87,13 +87,15 @@ static void screen_set_on(bool on)
 {
     if (on && !screen_on)
     {
-        fade_to_brightness(min_brightness, user_brightness);
+        //fade_to_brightness(min_brightness, user_brightness);
+        fade_to_brightness(0, user_brightness);
         screen_on = true;
         LOG_INF("Screen on (smooth)");
     }
     else if (!on && screen_on)
     {
-        fade_to_brightness(user_brightness, min_brightness);
+        //fade_to_brightness(user_brightness, min_brightness);
+        fade_to_brightness(user_brightness, 0);
         screen_on = false;
         LOG_INF("Screen off (smooth)");
     }
