@@ -247,7 +247,7 @@ static void ambient_light_thread(void)
         // Only adjust brightness if the display is on!
         if (!screen_on)
         {
-            k_sleep(K_MSEC(EVALUATION_INTERVAL));
+            k_sleep(K_MSEC(CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_EVALUATION_INTERVAL_MS));
             continue;
         }
 
