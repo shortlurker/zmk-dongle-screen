@@ -187,6 +187,41 @@ CONFIG_DONGLE_SCREEN_BRIGHTNESS_DOWN_KEYCODE=114
 CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP=5
 ```
 
+## Pairing
+
+The battery widget assigns the battery indicators from left to right, based on the sequence in which the keyboard halves are paired to the dongle.
+
+For split keyboards, it is essential to pair the left half first after flashing the dongle, followed by the right half. This ensures the correct mapping of battery status indicators and avoids swapped displays in the widget.
+
+The recommended procedure is as follows:
+
+1. Switch off both keyboard halves.
+2. Flash the dongle
+3. Disconnect the dongle
+4. Flash the left half
+5. Flash the right half
+6. Reconnect the dongle
+7. Switch on the left half and wait until the battery indicator appears on the dongle
+8. Switch on the right half
+
+### Reset Dongle
+If the dongle has already been paired with both keyboard halves and the battery widget displays swapped indicators (i.e., the left battery indicator refers to the right keyboard half), a full reset of the dongle is required.
+
+To achieve this, an appropriate configuration for the specific microcontroller must be added to the `build.yaml` in order to generate a `settings_reset-[microcontroller-name]-zmk.uf2` image. This image enables the complete removal of all stored pairing data from the dongle.
+
+```yaml
+  include:
+...
+  - board: seeeduino_xiao_ble
+    shield: settings_reset
+
+  - board: nice_nano_v2
+    shield: settings_reset
+...
+```
+
+After flashing the reset file, the pairing process should be repeated in the sequence described above to ensure correct mapping of the battery indicators.
+
 ## Development
 
 If you want to develop new features or change the layout of the screen you'll have to clone this repo and build it on your own.  
