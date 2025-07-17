@@ -36,7 +36,7 @@ static uint8_t ambient_min_brightness = CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_B
 
 static int8_t brightness_modifier = 0;
 
-static uint8_t clamp_brightness(uint8_t value)
+static uint8_t clamp_brightness(int8_t value)
 {
     if (value > max_brightness)
     {
@@ -119,7 +119,7 @@ static void fade_to_brightness(uint8_t from, uint8_t to)
 
 void set_screen_brightness(uint8_t value)
 {
-    uint8_t new_brightness = clamp_brightness(value);
+    int8_t new_brightness = clamp_brightness(value);
     fade_to_brightness(clamp_brightness(current_brightness + brightness_modifier), clamp_brightness(new_brightness + brightness_modifier));
     current_brightness = new_brightness;
 }
