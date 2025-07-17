@@ -7,6 +7,13 @@
 #include <zmk/events/keycode_state_changed.h>
 #include <zmk/events/layer_state_changed.h>
 
+#include <stdlib.h>
+
+int random0to100()
+{
+    return rand() % 101; // 0 to 100
+}
+
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #if CONFIG_DONGLE_SCREEN_MIN_BRIGHTNESS > CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS
@@ -146,13 +153,13 @@ static void screen_set_on(bool on)
 
         //
 
-        fade_to_brightness(min_brightness, current_brightness + brightness_modifier);
+        fade_to_brightness(min_brightness, clamp_brightness(current_brightness + brightness_modifier));
         screen_on = true;
         LOG_INF("Screen on (smooth)");
     }
     else if (!on && screen_on)
     {
-        fade_to_brightness(current_brightness + brightness_modifier, min_brightness);
+        fade_to_brightness(clamp_brightness(current_brightness + brightness_modifier), min_brightness);
         screen_on = false;
         LOG_INF("Screen off (smooth)");
     }
@@ -207,7 +214,7 @@ static void increase_brightness(void)
     LOG_DBG("Current brightness: %d, current modifier: %d", current_brightness, brightness_modifier);
 
     int16_t next = (int16_t)current_brightness + brightness_modifier + CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-    LOG_DBG("Next brightness would be: %d Maxixmum brightness is: %d", next, max_brightness);
+    LOG_DBG("Next brightness would be: %d Maximum brightness is: %d", next, max_brightness);
 
     if (next <= max_brightness)
     {
@@ -347,6 +354,8 @@ static void ambient_light_thread(void)
     while (1)
     {
 
+#ifndef CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_TEST
+
         if (!device_is_ready(ambient_sensor))
         {
             LOG_ERR("Ambient light sensor not ready!");
@@ -366,14 +375,20 @@ static void ambient_light_thread(void)
             rc = sensor_channel_get(ambient_sensor, SENSOR_CHAN_LIGHT, &val);
             if (rc == 0)
             {
+#else
+        k_sleep(K_SECONDS(10));
+        val.val1 = random0to100();
+
+#endif
                 LOG_DBG("APDS9960 raw: %d", val.val1);
                 uint8_t new_brightness = ambient_to_brightness(val.val1);
                 if (abs(new_brightness - last_brightness) > 5)
                 {
-                    if (ambient_min_brightness > new_brightness)
+                    // TODO: revisit this threshold
+                    if (ambient_min_brightness > new_brightness + brightness_modifier)
                     {
-                        LOG_DBG("Brightness (%d) would be lower than ambient minimum setting (%d). Raw sensor value is: %d",
-                                new_brightness, ambient_min_brightness, val.val1);
+                        LOG_DBG("Brightness incl. modifier (%d) would be lower than ambient minimum setting (%d). Raw sensor value is: %d",
+                                new_brightness + brightness_modifier, ambient_min_brightness, val.val1);
 
                         new_brightness = ambient_min_brightness;
                     }
@@ -394,8 +409,10 @@ static void ambient_light_thread(void)
                     }
                     last_brightness = new_brightness;
                 }
+#ifndef CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_TEST
             }
         }
+#endif                                                                              // CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_TEST
         k_sleep(K_MSEC(CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_EVALUATION_INTERVAL_MS)); // Adjust interval as needed
     }
 }

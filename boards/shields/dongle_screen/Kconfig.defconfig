@@ -162,6 +162,12 @@ config DONGLE_SCREEN_AMBIENT_LIGHT
     help
       If enabled, the ambient light sensor will be used to automatically adjust screen brightness.
 
+config DONGLE_SCREEN_AMBIENT_LIGHT_TEST
+    bool "Enable automatic brightness testing"
+    default n
+    help
+      If enabled, the ambient light sensor will be mocked to adjust screen brightness.
+
 config DONGLE_SCREEN_AMBIENT_LIGHT_EVALUATION_INTERVAL_MS
     int "The interval for ambient light evaluation (in milliseconds)"
     default 1000
