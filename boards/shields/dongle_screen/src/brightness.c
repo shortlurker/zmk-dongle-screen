@@ -139,6 +139,8 @@ static void screen_set_on(bool on)
         // temp
         if (current_brightness + brightness_modifier <= min_brightness)
         {
+            LOG_DBG("Current brightness (%d) + modifier (%d) = %d is less than or equal to min_brightness (%d), adjusting modifier by +%d to result in = %d.",
+                    current_brightness, brightness_modifier, current_brightness + brightness_modifier, min_brightness, CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP, current_brightness + brightness_modifier + CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP);
             brightness_modifier += CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
         }
 
@@ -202,23 +204,22 @@ K_THREAD_DEFINE(screen_idle_tid, 512, screen_idle_thread, NULL, NULL, NULL, 7, 0
 
 static void increase_brightness(void)
 {
-    LOG_DBG("Current brightness: %d, modifier: %d", current_brightness, brightness_modifier);
+    LOG_DBG("Current brightness: %d, current modifier: %d", current_brightness, brightness_modifier);
 
     int16_t next = (int16_t)current_brightness + brightness_modifier + CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-    LOG_DBG("Next brightness would be: %d", next);
+    LOG_DBG("Next brightness would be: %d Maxixmum brightness is: %d", next, max_brightness);
 
     if (next <= max_brightness)
     {
         brightness_modifier += CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-        LOG_DBG("Brightness modifier: %d", brightness_modifier);
+        LOG_DBG("New Brightness modifier: %d", brightness_modifier);
         set_screen_brightness(current_brightness);
     }
     else
     {
-        LOG_DBG("Brightness modifier would be too high, calculating possible value.");
+        LOG_WRN("Brightness modifier would be too high, calculating possible value.");
         // calculate how much the brightness_modifier can be increased by using next and max_brightness
         int16_t increase_possible = max_brightness - (int16_t)current_brightness - brightness_modifier;
-        LOG_DBG("Increase possible: %d", increase_possible);
         if (increase_possible > 0)
         {
             LOG_DBG("Brightness modifier can be increased by %d", increase_possible);
@@ -236,19 +237,18 @@ static void increase_brightness(void)
 
 static void decrease_brightness(void)
 {
-    LOG_DBG("Current brightness: %d, modifier: %d", current_brightness, brightness_modifier);
+    LOG_DBG("Current brightness: %d, current modifier: %d", current_brightness, brightness_modifier);
     int16_t next = (int16_t)current_brightness + brightness_modifier - CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-    LOG_DBG("Next brightness: %d", next);
+    LOG_DBG("Next brightness would be: %d Minimum brightness is: %d", next, min_brightness);
     if (next > min_brightness)
     {
         brightness_modifier -= CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-        LOG_DBG("Brightness modifier: %d", brightness_modifier);
-        int16_t new_brightness = current_brightness;
-        set_screen_brightness((uint8_t)new_brightness);
+        LOG_DBG("New Brightness modifier: %d", brightness_modifier);
+        set_screen_brightness(current_brightness);
     }
     else
     {
-        LOG_DBG("Brightness modifier would be too low, calculating possible value.");
+        LOG_WRN("Brightness modifier would be too low, calculating possible value.");
         // calculate how much the brightness_modifier can be decreased by using next and min_brightness
         int16_t decrease_possible = (int16_t)current_brightness + brightness_modifier - min_brightness;
         if (decrease_possible > 0)
