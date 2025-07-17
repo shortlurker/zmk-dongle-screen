@@ -98,7 +98,7 @@ config DONGLE_SCREEN_MIN_BRIGHTNESS
     default 0
     range 0 99
     help
-        This is also the brightness which is used by the automatic dimmer. If greater than 0 the screen would not turn off completly.
+        This is also the brightness which is used by the automatic dimmer. If greater than 0 the screen would not turn off completly. This value overrules the "DONGLE_SCREEN_AMBIENT_LIGHT_MIN_BRIGHTNESS" if it is lower than "DONGLE_SCREEN_MIN_BRIGHTNESS". 
 
 config DONGLE_SCREEN_BRIGHTNESS_KEYBOARD_CONTROL
     bool "Control screen brightness via keyboard"
@@ -167,5 +167,13 @@ config DONGLE_SCREEN_AMBIENT_LIGHT_EVALUATION_INTERVAL_MS
     default 1000
     help
       The interval how often the ambient light level should be evaluated.
+
+config DONGLE_SCREEN_AMBIENT_LIGHT_MIN_BRIGHTNESS
+    int "Minimum screen brightness when changed via ambient light sensor(1-99)"
+    default 1
+    range 1 99
+    help
+        This option allows to set another minimum brightness when the display is dimmed via the ambient sensor. This setting is overruled by "DONGLE_SCREEN_MIN_BRIGHTNESS", so it should not be lower than that. Otherwise the screen brightness will be set to "DONGLE_SCREEN_MIN_BRIGHTNESS".
+
 
 endif
