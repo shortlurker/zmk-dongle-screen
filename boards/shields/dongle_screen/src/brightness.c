@@ -7,6 +7,13 @@
 #include <zmk/events/keycode_state_changed.h>
 #include <zmk/events/layer_state_changed.h>
 
+#include <stdlib.h>
+
+int random0to100()
+{
+    return rand() % 101; // 0 to 100
+}
+
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #if CONFIG_DONGLE_SCREEN_MIN_BRIGHTNESS > CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS
@@ -117,9 +124,19 @@ static void fade_to_brightness(uint8_t from, uint8_t to)
 }
 */
 
-void set_screen_brightness(uint8_t value)
+void set_screen_brightness(uint8_t value, bool ambient)
 {
     int8_t new_brightness = clamp_brightness(value);
+
+    // calculate how much the new_brightness must be increased if the result of new_brightness and brightness_modifier is less than min_brightness when ambient is false and is less than ambient_min_brightness when ambient is true
+    if (ambient && (new_brightness + brightness_modifier <= ambient_min_brightness))
+    {
+        int8_t raw_brightness = new_brightness;
+        new_brightness += ambient_min_brightness - (new_brightness + brightness_modifier);
+        LOG_DBG("Ambient brightness (%d) + modifier (%d) (=%d) is less than or equal to ambient_min_brightness (%d), adjusting new_brightness by +%d to result in = %d.",
+                raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, ambient_min_brightness, new_brightness, new_brightness + brightness_modifier);
+    }
+
     fade_to_brightness(clamp_brightness(current_brightness + brightness_modifier), clamp_brightness(new_brightness + brightness_modifier));
     current_brightness = new_brightness;
 }
@@ -134,23 +151,26 @@ static void screen_set_on(bool on)
     if (on && !screen_on)
     {
         // TODO: Decide what to do when current_brightness + brightness_modifier is less or equals than min_brightness
+        // Currently it can be that the screen is only turned on after the next ambient reading
         LOG_DBG("Current brightness: %d, modifier: %d", current_brightness, brightness_modifier);
 
         // temp
         if (current_brightness + brightness_modifier <= min_brightness)
         {
+            LOG_DBG("Current brightness (%d) + modifier (%d) = %d is less than or equal to min_brightness (%d), adjusting modifier by +%d to result in = %d.",
+                    current_brightness, brightness_modifier, current_brightness + brightness_modifier, min_brightness, CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP, current_brightness + brightness_modifier + CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP);
             brightness_modifier += CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
         }
 
         //
 
-        fade_to_brightness(min_brightness, current_brightness + brightness_modifier);
+        fade_to_brightness(min_brightness, clamp_brightness(current_brightness + brightness_modifier));
         screen_on = true;
         LOG_INF("Screen on (smooth)");
     }
     else if (!on && screen_on)
     {
-        fade_to_brightness(current_brightness + brightness_modifier, min_brightness);
+        fade_to_brightness(clamp_brightness(current_brightness + brightness_modifier), min_brightness);
         screen_on = false;
         LOG_INF("Screen off (smooth)");
     }
@@ -202,30 +222,29 @@ K_THREAD_DEFINE(screen_idle_tid, 512, screen_idle_thread, NULL, NULL, NULL, 7, 0
 
 static void increase_brightness(void)
 {
-    LOG_DBG("Current brightness: %d, modifier: %d", current_brightness, brightness_modifier);
+    LOG_DBG("Current brightness: %d, current modifier: %d", current_brightness, brightness_modifier);
 
     int16_t next = (int16_t)current_brightness + brightness_modifier + CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-    LOG_DBG("Next brightness would be: %d", next);
+    LOG_DBG("Next brightness would be: %d Maximum brightness is: %d", next, max_brightness);
 
     if (next <= max_brightness)
     {
         brightness_modifier += CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-        LOG_DBG("Brightness modifier: %d", brightness_modifier);
-        set_screen_brightness(current_brightness);
+        LOG_DBG("New Brightness modifier: %d", brightness_modifier);
+        set_screen_brightness(current_brightness, false);
     }
     else
     {
-        LOG_DBG("Brightness modifier would be too high, calculating possible value.");
+        LOG_WRN("Brightness modifier would be too high, calculating possible value.");
         // calculate how much the brightness_modifier can be increased by using next and max_brightness
         int16_t increase_possible = max_brightness - (int16_t)current_brightness - brightness_modifier;
-        LOG_DBG("Increase possible: %d", increase_possible);
         if (increase_possible > 0)
         {
             LOG_DBG("Brightness modifier can be increased by %d", increase_possible);
 
             brightness_modifier += increase_possible;
             LOG_DBG("Brightness modifier increased to %d", brightness_modifier);
-            set_screen_brightness(current_brightness);
+            set_screen_brightness(current_brightness, false);
         }
         else
         {
@@ -236,19 +255,18 @@ static void increase_brightness(void)
 
 static void decrease_brightness(void)
 {
-    LOG_DBG("Current brightness: %d, modifier: %d", current_brightness, brightness_modifier);
+    LOG_DBG("Current brightness: %d, current modifier: %d", current_brightness, brightness_modifier);
     int16_t next = (int16_t)current_brightness + brightness_modifier - CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-    LOG_DBG("Next brightness: %d", next);
+    LOG_DBG("Next brightness would be: %d Minimum brightness is: %d", next, min_brightness);
     if (next > min_brightness)
     {
         brightness_modifier -= CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-        LOG_DBG("Brightness modifier: %d", brightness_modifier);
-        int16_t new_brightness = current_brightness;
-        set_screen_brightness((uint8_t)new_brightness);
+        LOG_DBG("New Brightness modifier: %d", brightness_modifier);
+        set_screen_brightness(current_brightness, false);
     }
     else
     {
-        LOG_DBG("Brightness modifier would be too low, calculating possible value.");
+        LOG_WRN("Brightness modifier would be too low, calculating possible value.");
         // calculate how much the brightness_modifier can be decreased by using next and min_brightness
         int16_t decrease_possible = (int16_t)current_brightness + brightness_modifier - min_brightness;
         if (decrease_possible > 0)
@@ -257,7 +275,7 @@ static void decrease_brightness(void)
 
             brightness_modifier -= decrease_possible;
             LOG_DBG("Brightness modifier decreased to %d", brightness_modifier);
-            set_screen_brightness(current_brightness);
+            set_screen_brightness(current_brightness, false);
         }
         else
         {
@@ -347,6 +365,8 @@ static void ambient_light_thread(void)
     while (1)
     {
 
+#ifndef CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_TEST
+
         if (!device_is_ready(ambient_sensor))
         {
             LOG_ERR("Ambient light sensor not ready!");
@@ -354,7 +374,7 @@ static void ambient_light_thread(void)
             /*if (screen_on)
             {
                 uint8_t new_brightness = 5;
-                set_screen_brightness(new_brightness);
+                set_screen_brightness(new_brightness, true);
                 last_brightness = new_brightness;
             }*/
             k_sleep(K_SECONDS(5));
@@ -366,25 +386,32 @@ static void ambient_light_thread(void)
             rc = sensor_channel_get(ambient_sensor, SENSOR_CHAN_LIGHT, &val);
             if (rc == 0)
             {
+#else
+        k_sleep(K_SECONDS(10));
+        val.val1 = random0to100();
+
+#endif
                 LOG_DBG("APDS9960 raw: %d", val.val1);
                 uint8_t new_brightness = ambient_to_brightness(val.val1);
                 if (abs(new_brightness - last_brightness) > 5)
                 {
-                    if (ambient_min_brightness > new_brightness)
+                    // TODO: revisit this threshold
+                    // TODO: Do I still need this when the if in set_screen_brightness() is there?
+                    if (ambient_min_brightness > new_brightness + brightness_modifier)
                     {
-                        LOG_DBG("Brightness (%d) would be lower than ambient minimum setting (%d). Raw sensor value is: %d",
-                                new_brightness, ambient_min_brightness, val.val1);
+                        LOG_DBG("Brightness (%d) incl. modifier (%d) (=%d) would be lower than ambient minimum setting (%d). Raw sensor value is: %d",
+                                new_brightness, brightness_modifier, new_brightness + brightness_modifier, ambient_min_brightness, val.val1);
 
-                        new_brightness = ambient_min_brightness;
+                        // new_brightness = ambient_min_brightness;
                     }
                     else
                     {
-                        LOG_DBG("Ambient light: %d (raw) -> brightness %d", val.val1, new_brightness);
+                        LOG_DBG("Ambient light: %d (raw) -> brightness %d + modifier %d = %d", val.val1, new_brightness, brightness_modifier, new_brightness + brightness_modifier);
                     }
 
                     if (screen_on)
                     {
-                        set_screen_brightness(new_brightness);
+                        set_screen_brightness(new_brightness, true);
                     }
                     else
                     {
@@ -394,8 +421,10 @@ static void ambient_light_thread(void)
                     }
                     last_brightness = new_brightness;
                 }
+#ifndef CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_TEST
             }
         }
+#endif                                                                              // CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_TEST
         k_sleep(K_MSEC(CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_EVALUATION_INTERVAL_MS)); // Adjust interval as needed
     }
 }
@@ -408,7 +437,7 @@ K_THREAD_DEFINE(ambient_light_tid, 512, ambient_light_thread, NULL, NULL, NULL, 
 
 static int init_fixed_brightness(void)
 {
-    set_screen_brightness(current_brightness);
+    set_screen_brightness(current_brightness, false);
     last_activity = k_uptime_get();
 #if CONFIG_DONGLE_SCREEN_IDLE_TIMEOUT_S > 0
     // Wake up the idle thread at boot
