@@ -42,8 +42,8 @@ static int8_t current_brightness = CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS;
 static uint8_t ambient_min_brightness = CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_BRIGHTNESS;
 #endif
 
-#ifndef M_PI //No M_Pi in math.h
-    #define M_PI 3.14159265358979323846
+#ifndef M_PI // No M_Pi in math.h
+#define M_PI 3.14159265358979323846
 #endif
 
 static int8_t brightness_modifier = 0;
@@ -77,7 +77,7 @@ static void fade_to_brightness(uint8_t from, uint8_t to)
     }
 
     const int step_delay = BRIGHTNESS_DELAY_MS;
-    const int abs_diff = abs(to - from);                        // Total number of brightness steps in the fade
+    const int abs_diff = abs(to - from); // Total number of brightness steps in the fade
 
     /*
     Adjust the duration of the fade depending on how small the change is:
@@ -87,17 +87,20 @@ static void fade_to_brightness(uint8_t from, uint8_t to)
     int dynamic_duration = abs_diff < 4 ? 1000 : BRIGHTNESS_FADE_DURATION_MS;
 
     // Clamp duration to always be between 500ms and 1000ms
-    if (dynamic_duration < 500)  dynamic_duration = 500;        // Minimum fade duration
-    if (dynamic_duration > 1000) dynamic_duration = 1000;       // Maximum fade duration
+    if (dynamic_duration < 500)
+        dynamic_duration = 500; // Minimum fade duration
+    if (dynamic_duration > 1000)
+        dynamic_duration = 1000; // Maximum fade duration
 
-    const int steps = dynamic_duration / step_delay;            // Total number of animation steps
+    const int steps = dynamic_duration / step_delay; // Total number of animation steps
 
     float diff = to - from;
     float tmp_brightness = 0.0f;
-    uint8_t last_applied = 255;                                 // Keeps track of last value sent to avoid redundant updates. 225, first "rounded != last_applied" will always true
+    uint8_t last_applied = 255; // Keeps track of last value sent to avoid redundant updates. 225, first "rounded != last_applied" will always true
 
-    for (int i = 0; i <= steps; i++) {
-        float t = (float)i / steps;                             // Normalized time value: 0.0 at start, 1.0 at end
+    for (int i = 0; i <= steps; i++)
+    {
+        float t = (float)i / steps; // Normalized time value: 0.0 at start, 1.0 at end
 
         /*
          Cosine easing (ease-in-out): (1 - cos(t * π)) / 2
@@ -105,81 +108,19 @@ static void fade_to_brightness(uint8_t from, uint8_t to)
             - Produces a smooth S-curve transitio flat > steep > flat
         */
         float eased = (1.0f - cosf(t * M_PI)) / 2.0f;
-        tmp_brightness = from + diff * eased;                   // Interpolate the brightness using eased values
-        uint8_t rounded = (uint8_t)(tmp_brightness + 0.5f);     // Convert float brightness to nearest integer
+        tmp_brightness = from + diff * eased;               // Interpolate the brightness using eased values
+        uint8_t rounded = (uint8_t)(tmp_brightness + 0.5f); // Convert float brightness to nearest integer
 
         // Only apply brightness if it actually changed - avoids redundant LED updates
-        if (rounded != last_applied) {
+        if (rounded != last_applied)
+        {
             apply_brightness(rounded);
             last_applied = rounded;
-        } 
+        }
         k_msleep(step_delay);
     }
-    apply_brightness(to);                                       // Ensure the final brightness is applied to the end value
+    apply_brightness(to); // Ensure the final brightness is applied to the end value
 }
-
-/*
-
-static void fade_to_brightness(uint8_t from, uint8_t to)
-{
-    if (from == to)
-    {
-        apply_brightness(to);
-        return;
-    }
-    if (from < to)
-    {
-        for (uint8_t b = from; b < to; b += BRIGHTNESS_STEP)
-        {
-            apply_brightness(b);
-            k_msleep(BRIGHTNESS_DELAY_MS);
-        }
-    }
-    else
-    {
-        for (int b = from; b > to; b -= BRIGHTNESS_STEP)
-        {
-            apply_brightness(b);
-            k_msleep(BRIGHTNESS_DELAY_MS);
-        }
-    }
-    apply_brightness(to);
-}
-*/
-/*
-static void fade_to_brightness(uint8_t from, uint8_t to)
-{
-    if (from == to)
-    {
-        LOG_INF("No fading needed. Brightness already at %d.", to);
-        apply_brightness(to);
-        return;
-    }
-
-    const int step_delay_ms = BRIGHTNESS_DELAY_MS;
-    const int total_steps = BRIGHTNESS_FADE_DURATION_MS / step_delay_ms;
-
-    float current = (float)from;
-    float step = (float)(to - from) / total_steps;
-
-    LOG_INF("Starting fade from %d to %d over %d ms (%d steps, step size: %.4f)",
-            from, to, BRIGHTNESS_FADE_DURATION_MS, total_steps, step);
-
-
-    for (int i = 0; i < total_steps; i++)
-    {
-        uint8_t brightness = (uint8_t)(current + 0.5f);
-        LOG_DBG("Fade step %3d/%3d: setting brightness to %3d (raw: %.2f)",
-                i + 1, total_steps, brightness, current);
-        apply_brightness(brightness);
-        current += step;
-        k_msleep(step_delay_ms);
-    }
-
-    LOG_INF("Finalizing fade by applying exact target brightness: %d", to);
-    apply_brightness(to);
-}
-*/
 
 void set_screen_brightness(uint8_t value, bool ambient)
 {
