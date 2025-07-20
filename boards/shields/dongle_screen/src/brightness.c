@@ -126,6 +126,7 @@ void set_screen_brightness(uint8_t value, bool ambient)
 {
     int8_t new_brightness = clamp_brightness(value);
 
+#if CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT
     // calculate how much the new_brightness must be increased if the result of new_brightness and brightness_modifier is less than min_brightness when ambient is false and is less than ambient_min_brightness when ambient is true
     if (ambient && (new_brightness + brightness_modifier <= ambient_min_brightness))
     {
@@ -134,6 +135,7 @@ void set_screen_brightness(uint8_t value, bool ambient)
         LOG_DBG("Ambient brightness (%d) + modifier (%d) (=%d) is less than or equal to ambient_min_brightness (%d), adjusting new_brightness by +%d to result in = %d.",
                 raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, ambient_min_brightness, new_brightness, new_brightness + brightness_modifier);
     }
+#endif
 
     fade_to_brightness(clamp_brightness(current_brightness + brightness_modifier), clamp_brightness(new_brightness + brightness_modifier));
     current_brightness = new_brightness;
