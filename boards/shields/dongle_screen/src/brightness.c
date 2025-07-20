@@ -6,6 +6,7 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/keycode_state_changed.h>
 #include <zmk/events/layer_state_changed.h>
+#include <math.h>
 
 #include <stdlib.h>
 
@@ -24,8 +25,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #error "DONGLE_SCREEN_AMBIENT_LIGHT_MIN_BRIGHTNESS must be less than or equal to DONGLE_SCREEN_MAX_BRIGHTNESS!"
 #endif
 
-#define BRIGHTNESS_STEP 2
-#define BRIGHTNESS_DELAY_MS 10
+#define BRIGHTNESS_STEP 1
+#define BRIGHTNESS_DELAY_MS 2
 #define BRIGHTNESS_FADE_DURATION_MS 500
 #define SCREEN_IDLE_TIMEOUT_MS (CONFIG_DONGLE_SCREEN_IDLE_TIMEOUT_S * 1000)
 
@@ -39,6 +40,10 @@ static int8_t current_brightness = CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS;
 
 #if IS_ENABLED(CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT)
 static uint8_t ambient_min_brightness = CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_BRIGHTNESS;
+#endif
+
+#ifndef M_PI //No M_Pi in math.h
+    #define M_PI 3.14159265358979323846
 #endif
 
 static int8_t brightness_modifier = 0;
@@ -70,6 +75,58 @@ static void fade_to_brightness(uint8_t from, uint8_t to)
         apply_brightness(to);
         return;
     }
+
+    const int step_delay = BRIGHTNESS_DELAY_MS;
+    const int abs_diff = abs(to - from);                        // Total number of brightness steps in the fade
+
+    /*
+    Adjust the duration of the fade depending on how small the change is:
+        - Small changes -> longer fade
+        - For larger changes -> cap to avoid long transitions
+    */
+    int dynamic_duration = abs_diff < 4 ? 1000 : BRIGHTNESS_FADE_DURATION_MS;
+
+    // Clamp duration to always be between 500ms and 1000ms
+    if (dynamic_duration < 500)  dynamic_duration = 500;        // Minimum fade duration
+    if (dynamic_duration > 1000) dynamic_duration = 1000;       // Maximum fade duration
+
+    const int steps = dynamic_duration / step_delay;            // Total number of animation steps
+
+    float diff = to - from;
+    float tmp_brightness = 0.0f;
+    uint8_t last_applied = 255;                                 // Keeps track of last value sent to avoid redundant updates. 225, first "rounded != last_applied" will always true
+
+    for (int i = 0; i <= steps; i++) {
+        float t = (float)i / steps;                             // Normalized time value: 0.0 at start, 1.0 at end
+
+        /*
+         Cosine easing (ease-in-out): (1 - cos(t * π)) / 2
+            - Starts slow, accelerates in the middle, slows down again
+            - Produces a smooth S-curve transitio flat > steep > flat
+        */
+        float eased = (1.0f - cosf(t * M_PI)) / 2.0f;
+        tmp_brightness = from + diff * eased;                   // Interpolate the brightness using eased values
+        uint8_t rounded = (uint8_t)(tmp_brightness + 0.5f);     // Convert float brightness to nearest integer
+
+        // Only apply brightness if it actually changed - avoids redundant LED updates
+        if (rounded != last_applied) {
+            apply_brightness(rounded);
+            last_applied = rounded;
+        } 
+        k_msleep(step_delay);
+    }
+    apply_brightness(to);                                       // Ensure the final brightness is applied to the end value
+}
+
+/*
+
+static void fade_to_brightness(uint8_t from, uint8_t to)
+{
+    if (from == to)
+    {
+        apply_brightness(to);
+        return;
+    }
     if (from < to)
     {
         for (uint8_t b = from; b < to; b += BRIGHTNESS_STEP)
@@ -88,7 +145,7 @@ static void fade_to_brightness(uint8_t from, uint8_t to)
     }
     apply_brightness(to);
 }
-
+*/
 /*
 static void fade_to_brightness(uint8_t from, uint8_t to)
 {
