@@ -135,6 +135,13 @@ void set_screen_brightness(uint8_t value, bool ambient)
         LOG_DBG("Ambient brightness (%d) + modifier (%d) (=%d) is less than or equal to ambient_min_brightness (%d), adjusting new_brightness by +%d to result in = %d.",
                 raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, ambient_min_brightness, new_brightness, new_brightness + brightness_modifier);
     }
+    else if (ambient && (new_brightness + brightness_modifier > max_brightness))
+    {
+        int8_t raw_brightness = new_brightness;
+        new_brightness -= (new_brightness + brightness_modifier) - max_brightness;
+        LOG_DBG("Ambient brightness (%d) + modifier (%d) (=%d) is more than max_brightness (%d), adjusting new_brightness by -%d to result in = %d.",
+                raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, max_brightness, raw_brightness - new_brightness, new_brightness + brightness_modifier);
+    }
 #endif
 
     fade_to_brightness(clamp_brightness(current_brightness + brightness_modifier), clamp_brightness(new_brightness + brightness_modifier));
@@ -403,6 +410,13 @@ static void ambient_light_thread(void)
                                 new_brightness, brightness_modifier, new_brightness + brightness_modifier, ambient_min_brightness, val.val1);
 
                         // new_brightness = ambient_min_brightness;
+                    }
+                    else if (new_brightness + brightness_modifier > max_brightness)
+                    {
+                        LOG_DBG("Brightness (%d) incl. modifier (%d) (=%d) would be higher than maximum setting (%d). Raw sensor value is: %d",
+                                new_brightness, brightness_modifier, new_brightness + brightness_modifier, max_brightness, val.val1);
+
+                        // new_brightness = max_brightness;
                     }
                     else
                     {
