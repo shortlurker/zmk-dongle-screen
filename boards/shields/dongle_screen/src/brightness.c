@@ -48,6 +48,8 @@ static uint8_t ambient_min_brightness = CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_B
 
 static int8_t brightness_modifier = 0;
 
+static bool off_through_modifier = false; // Used to track if the screen was turned off through the brightness modifier
+
 static uint8_t clamp_brightness(int8_t value)
 {
     if (value > max_brightness)
@@ -173,6 +175,7 @@ static void screen_set_on(bool on)
 
         fade_to_brightness(min_brightness, clamp_brightness(current_brightness + brightness_modifier));
         screen_on = true;
+        off_through_modifier = false; // Reset the flag, because the screen is turned on again
         LOG_INF("Screen on (smooth)");
     }
     else if (!on && screen_on)
@@ -180,6 +183,10 @@ static void screen_set_on(bool on)
         fade_to_brightness(clamp_brightness(current_brightness + brightness_modifier), min_brightness);
         screen_on = false;
         LOG_INF("Screen off (smooth)");
+    }
+    else
+    {
+        LOG_DBG("Screen state is already %s, no action taken.", on ? "on" : "off");
     }
 }
 
@@ -193,7 +200,8 @@ void screen_idle_thread(void)
 {
     while (1)
     {
-        if (screen_on)
+        // Thread should run even if the screen is off, but only if the screen is off through the modifier
+        if (screen_on || (!screen_on && off_through_modifier))
         {
             int64_t now = k_uptime_get();
             int64_t elapsed = now - last_activity;
@@ -202,6 +210,7 @@ void screen_idle_thread(void)
             if (remaining <= 0)
             {
                 screen_set_on(false);
+                off_through_modifier = false; // Reset the flag, because the screen is turned off
                 // After turning off, sleep until next activity (key event will wake screen)
                 k_sleep(K_FOREVER);
             }
@@ -258,6 +267,19 @@ static void increase_brightness(void)
             LOG_DBG("Brightness modifier cannot be increased further.");
         }
     }
+
+    // TODO: Decide if change:
+    // If the brightness_modifier is so small that the display remains off because current_brightness + brightness_modifier <= min_brightness,
+    // then the display should still be turned on.
+    // This is to ensure that the display is turned on when the brightness is increased, even if the modifier is small enough to keep it off.
+
+    if ((current_brightness + brightness_modifier > min_brightness) && off_through_modifier)
+    {
+
+        LOG_WRN("Current brightness (%d) + modifier (%d) = %d is more than min_brightness (%d), setting screen on.",
+                current_brightness, brightness_modifier, current_brightness + brightness_modifier, min_brightness);
+        screen_set_on(true);
+    }
 }
 
 static void decrease_brightness(void)
@@ -289,6 +311,15 @@ static void decrease_brightness(void)
             LOG_DBG("Brightness modifier cannot be decreased further.");
         }
     }
+
+    if (current_brightness + brightness_modifier <= min_brightness)
+    {
+
+        LOG_WRN("Current brightness (%d) + modifier (%d) = %d is less than or equal to min_brightness (%d), setting screen off.",
+                current_brightness, brightness_modifier, current_brightness + brightness_modifier, min_brightness);
+        off_through_modifier = true; // Track that the screen was turned off through the
+        screen_set_on(false);
+    }
 }
 
 #endif // CONFIG_DONGLE_SCREEN_BRIGHTNESS_KEYBOARD_CONTROL
@@ -317,12 +348,28 @@ static int key_listener(const zmk_event_t *eh)
             decrease_brightness();
             return 0;
         }
+        else if (ev->keycode == CONFIG_DONGLE_SCREEN_TOGGLE_KEYCODE)
+        {
+            LOG_INF("Toggle screen key recognized!");
+            // Toggle screen on/off
+            if (screen_on)
+            {
+                off_through_modifier = true; // Track that the screen was turned off through the toggle key
+                screen_set_on(false);
+            }
+            else
+            {
+                screen_set_on(true);
+            }
+            return 0;
+        }
+
 #endif
     }
 
 #if CONFIG_DONGLE_SCREEN_IDLE_TIMEOUT_S > 0
     last_activity = k_uptime_get();
-    if (!screen_on)
+    if (!screen_on && !off_through_modifier)
     {
         screen_set_on(true);
         k_wakeup(screen_idle_tid);
