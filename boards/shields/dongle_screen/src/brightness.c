@@ -65,14 +65,12 @@ static void apply_brightness(uint8_t value)
     LOG_INF("Screen brightness set to %d", value);
 }
 
-
-
-
 // Threaded fade logic
 // Contains starting and target brightness levels to be animated
-struct fade_request_t {
-    uint8_t from;           // Starting brightness level
-    uint8_t to;             // Target brightness level
+struct fade_request_t
+{
+    uint8_t from; // Starting brightness level
+    uint8_t to;   // Target brightness level
 };
 
 #define FADE_QUEUE_SIZE 4
@@ -85,23 +83,29 @@ K_MSGQ_DEFINE(fade_msgq, sizeof(struct fade_request_t), FADE_QUEUE_SIZE, 4);
 // Provides a natural "S-curve" animation effect: starts slow, accelerates, then slows again.
 // Helps avoid abrupt changes in perceived brightness.
 // delete old cpu heavy cons calculation
-static float ease_in_out(float t) {
-    if (t < 0.5f) return 4.0f * t * t * t;
+static float ease_in_out(float t)
+{
+    if (t < 0.5f)
+        return 4.0f * t * t * t;
     float f = -2.0f * t + 2.0f;
     return 1.0f - (f * f * f) / 2.0f;
 }
 
 // Dedicated thread responsible for handling all fade animations.
 // Receives fade requests from the queue and applies brightness changes over time using easing.
-void fade_thread(void) {
+void fade_thread(void)
+{
     struct fade_request_t req;
 
-    while (1) {
+    while (1)
+    {
         // Wait indefinitely for the next fade request to arrive in the queue
-        if (k_msgq_get(&fade_msgq, &req, K_FOREVER) == 0) {
+        if (k_msgq_get(&fade_msgq, &req, K_FOREVER) == 0)
+        {
 
             // Skip animation entirely if brightness difference is too small
-            if (req.from == req.to || abs(req.to - req.from) <= 1) {
+            if (req.from == req.to || abs(req.to - req.from) <= 1)
+            {
                 apply_brightness(req.to);
                 continue;
             }
@@ -117,14 +121,16 @@ void fade_thread(void) {
             uint8_t last_applied = 255; // Used to prevent redundant LED updates to save performance
 
             // Interpolate brightness across 'steps' frames using easing
-            for (int i = 0; i <= steps; i++) {
-                float t = (float)i / steps;                // Normalized time in [0, 1]
-                float eased = ease_in_out(t);              // Eased time for smoother progression
+            for (int i = 0; i <= steps; i++)
+            {
+                float t = (float)i / steps;                                  // Normalized time in [0, 1]
+                float eased = ease_in_out(t);                                // Eased time for smoother progression
                 float interpolated = req.from + (req.to - req.from) * eased; // Interpolated value
                 uint8_t brightness = (uint8_t)(interpolated + 0.5f);         // Rounded to nearest integer
 
                 // Only send update if brightness actually changed
-                if (brightness != last_applied) {
+                if (brightness != last_applied)
+                {
                     apply_brightness(brightness);
                     last_applied = brightness;
                 }
@@ -133,7 +139,8 @@ void fade_thread(void) {
             }
 
             // safeguard to ensure the target value is set at the end
-            if (last_applied != req.to) {
+            if (last_applied != req.to)
+            {
                 apply_brightness(req.to);
             }
         }
@@ -149,15 +156,10 @@ K_THREAD_DEFINE(fade_tid, 768, fade_thread, NULL, NULL, NULL, 6, 0, 0);
 // Ensures that only the most recent fade request is applied by purging the queue first for changes in between animations
 static void fade_to_brightness(uint8_t from, uint8_t to)
 {
-    struct fade_request_t req = { .from = from, .to = to };
-    k_msgq_purge(&fade_msgq);          // Clear any pending fades to avoid outdated transitions
+    struct fade_request_t req = {.from = from, .to = to};
+    k_msgq_purge(&fade_msgq);                // Clear any pending fades to avoid outdated transitions
     k_msgq_put(&fade_msgq, &req, K_NO_WAIT); // Submit the new fade request without blocking
 }
-
-
-
-
-
 
 void set_screen_brightness(uint8_t value, bool ambient)
 {
@@ -195,15 +197,12 @@ static void screen_set_on(bool on)
     if (on && !screen_on)
     {
         // TODO: Decide what to do when current_brightness + brightness_modifier is less or equals than min_brightness
-        // Currently it can be that the screen is only turned on after the next ambient reading
-        LOG_DBG("Current brightness: %d, modifier: %d", current_brightness, brightness_modifier);
-
-        // temp
         if (current_brightness + brightness_modifier <= min_brightness)
         {
-            LOG_DBG("Current brightness (%d) + modifier (%d) = %d is less than or equal to min_brightness (%d), adjusting modifier by +%d to result in = %d.",
-                    current_brightness, brightness_modifier, current_brightness + brightness_modifier, min_brightness, CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP, current_brightness + brightness_modifier + CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP);
-            brightness_modifier += CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
+            int8_t raw_brightness = current_brightness;
+            current_brightness += min_brightness - (current_brightness + brightness_modifier) + 1;
+            LOG_DBG("SCREEN TURN ON Current brightness (%d) + modifier (%d) (=%d) is less than or equal to min_brightness (%d), adjusting current_brightness by +%d to result in = %d.",
+                    raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, min_brightness, current_brightness, current_brightness + brightness_modifier);
         }
 
         //
