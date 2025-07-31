@@ -201,7 +201,7 @@ static void screen_set_on(bool on)
         {
             int8_t raw_brightness = current_brightness;
             current_brightness += min_brightness - (current_brightness + brightness_modifier) + 1;
-            LOG_DBG("SCREEN TURN ON Current brightness (%d) + modifier (%d) (=%d) is less than or equal to min_brightness (%d), adjusting current_brightness by +%d to result in = %d.",
+            LOG_DBG("SCREEN TURN ON Current brightness (%d) + modifier (%d) (=%d) is less than or equal to min_brightness (%d), adjusting current_brightness by +%d and adding additional +1 to result in = %d.",
                     raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, min_brightness, current_brightness, current_brightness + brightness_modifier);
         }
 
