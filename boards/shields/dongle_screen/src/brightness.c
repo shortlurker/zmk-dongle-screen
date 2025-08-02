@@ -37,10 +37,6 @@ static uint8_t max_brightness = CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS;
 static uint8_t min_brightness = CONFIG_DONGLE_SCREEN_MIN_BRIGHTNESS;
 static int8_t current_brightness = CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS;
 
-#if IS_ENABLED(CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT)
-static uint8_t ambient_min_brightness = CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_BRIGHTNESS;
-#endif
-
 static int8_t brightness_modifier = 0;
 
 static bool off_through_modifier = false; // Used to track if the screen was turned off through the brightness modifier
@@ -166,13 +162,13 @@ void set_screen_brightness(uint8_t value, bool ambient)
     int8_t new_brightness = clamp_brightness(value);
 
 #if CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT
-    // calculate how much the new_brightness must be increased if the result of new_brightness and brightness_modifier is less than min_brightness when ambient is false and is less than ambient_min_brightness when ambient is true
-    if (ambient && (new_brightness + brightness_modifier <= ambient_min_brightness))
+    // calculate how much the new_brightness must be increased if the result of new_brightness and brightness_modifier is less than min_brightness when ambient is false and is less than min_brightness when ambient is true
+    if (ambient && (new_brightness + brightness_modifier <= min_brightness))
     {
         int8_t raw_brightness = new_brightness;
-        new_brightness += ambient_min_brightness - (new_brightness + brightness_modifier);
-        LOG_DBG("Ambient brightness (%d) + modifier (%d) (=%d) is less than or equal to ambient_min_brightness (%d), adjusting new_brightness by +%d to result in = %d.",
-                raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, ambient_min_brightness, new_brightness, new_brightness + brightness_modifier);
+        new_brightness += min_brightness - (new_brightness + brightness_modifier);
+        LOG_DBG("Ambient brightness (%d) + modifier (%d) (=%d) is less than or equal to min_brightness (%d), adjusting new_brightness by +%d to result in = %d.",
+                raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, min_brightness, new_brightness, new_brightness + brightness_modifier);
     }
     else if (ambient && (new_brightness + brightness_modifier > max_brightness))
     {
@@ -197,24 +193,24 @@ static void screen_set_on(bool on)
     if (on && !screen_on)
     {
         // TODO: Decide what to do when current_brightness + brightness_modifier is less or equals than min_brightness
-        if (current_brightness + brightness_modifier <= min_brightness)
+        if (current_brightness + brightness_modifier <= 0)
         {
             int8_t raw_brightness = current_brightness;
-            current_brightness += min_brightness - (current_brightness + brightness_modifier) + 1;
-            LOG_DBG("SCREEN TURN ON Current brightness (%d) + modifier (%d) (=%d) is less than or equal to min_brightness (%d), adjusting current_brightness by +%d to result in = %d.",
-                    raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, min_brightness, current_brightness, current_brightness + brightness_modifier);
+            current_brightness += 0 - (current_brightness + brightness_modifier) + 1;
+            LOG_DBG("SCREEN TURN ON Current brightness (%d) + modifier (%d) (=%d) is less than or equal to 0 (%d), adjusting current_brightness by +%d and adding additional +1 to result in = %d.",
+                    raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, 0, current_brightness, current_brightness + brightness_modifier);
         }
 
         //
 
-        fade_to_brightness(min_brightness, clamp_brightness(current_brightness + brightness_modifier));
+        fade_to_brightness(0, clamp_brightness(current_brightness + brightness_modifier));
         screen_on = true;
         off_through_modifier = false; // Reset the flag, because the screen is turned on again
         LOG_INF("Screen on (smooth)");
     }
     else if (!on && screen_on)
     {
-        fade_to_brightness(clamp_brightness(current_brightness + brightness_modifier), min_brightness);
+        fade_to_brightness(clamp_brightness(current_brightness + brightness_modifier), 0);
         screen_on = false;
         LOG_INF("Screen off (smooth)");
     }
@@ -321,7 +317,7 @@ static void decrease_brightness(void)
     LOG_DBG("Current brightness: %d, current modifier: %d", current_brightness, brightness_modifier);
     int16_t next = (int16_t)current_brightness + brightness_modifier - CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
     LOG_DBG("Next brightness would be: %d Minimum brightness is: %d", next, min_brightness);
-    if (next > min_brightness)
+    if (next >= min_brightness)
     {
         brightness_modifier -= CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
         LOG_DBG("New Brightness modifier: %d", brightness_modifier);
@@ -346,10 +342,10 @@ static void decrease_brightness(void)
         }
     }
 
-    if (current_brightness + brightness_modifier <= min_brightness)
+    if (current_brightness + brightness_modifier < min_brightness)
     {
 
-        LOG_WRN("Current brightness (%d) + modifier (%d) = %d is less than or equal to min_brightness (%d), setting screen off.",
+        LOG_WRN("Current brightness (%d) + modifier (%d) = %d is less than min_brightness (%d), setting screen off.",
                 current_brightness, brightness_modifier, current_brightness + brightness_modifier, min_brightness);
         off_through_modifier = true; // Track that the screen was turned off through the
         screen_set_on(false);
@@ -485,12 +481,12 @@ static void ambient_light_thread(void)
                 {
                     // TODO: revisit this threshold
                     // TODO: Do I still need this when the if in set_screen_brightness() is there?
-                    if (ambient_min_brightness > new_brightness + brightness_modifier)
+                    if (min_brightness > new_brightness + brightness_modifier)
                     {
                         LOG_DBG("Brightness (%d) incl. modifier (%d) (=%d) would be lower than ambient minimum setting (%d). Raw sensor value is: %d",
-                                new_brightness, brightness_modifier, new_brightness + brightness_modifier, ambient_min_brightness, val.val1);
+                                new_brightness, brightness_modifier, new_brightness + brightness_modifier, min_brightness, val.val1);
 
-                        // new_brightness = ambient_min_brightness;
+                        // new_brightness = min_brightness;
                     }
                     else if (new_brightness + brightness_modifier > max_brightness)
                     {
