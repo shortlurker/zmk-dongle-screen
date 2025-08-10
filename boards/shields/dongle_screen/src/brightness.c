@@ -20,14 +20,23 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #error "DONGLE_SCREEN_MIN_BRIGHTNESS must be less than or equal to DONGLE_SCREEN_MAX_BRIGHTNESS!"
 #endif
 
-#if CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT && (CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_BRIGHTNESS > CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS)
-#error "DONGLE_SCREEN_AMBIENT_LIGHT_MIN_BRIGHTNESS must be less than or equal to DONGLE_SCREEN_MAX_BRIGHTNESS!"
+#if CONFIG_DONGLE_SCREEN_BRIGHTNESS_MODIFIER + CONFIG_DONGLE_SCREEN_MIN_BRIGHTNESS > CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS
+#error "DONGLE_SCREEN_BRIGHTNESS_MODIFIER + DONGLE_SCREEN_MIN_BRIGHTNESS can't be greater than DONGLE_SCREEN_MAX_BRIGHTNESS!"
+#endif
+
+#if CONFIG_DONGLE_SCREEN_BRIGHTNESS_MODIFIER + CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS < CONFIG_DONGLE_SCREEN_MIN_BRIGHTNESS
+#error "DONGLE_SCREEN_BRIGHTNESS_MODIFIER + DONGLE_SCREEN_MAX_BRIGHTNESS can't be smaller than DONGLE_SCREEN_MIN_BRIGHTNESS!"
+#endif
+
+#if CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT && (CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE > CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MAX_RAW_VALUE)
+#error "DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE can't be greater than DONGLE_SCREEN_AMBIENT_LIGHT_MAX_RAW_VALUE when DONGLE_SCREEN_AMBIENT_LIGHT is activated!"
 #endif
 
 #define BRIGHTNESS_STEP 1
 #define BRIGHTNESS_DELAY_MS 2
 #define BRIGHTNESS_FADE_DURATION_MS 500
 #define SCREEN_IDLE_TIMEOUT_MS (CONFIG_DONGLE_SCREEN_IDLE_TIMEOUT_S * 1000)
+#define BRIGHTNESS_CHANGE_THRESHOLD 5
 
 static const struct device *pwm_leds_dev = DEVICE_DT_GET_ONE(pwm_leds);
 #define DISP_BL DT_NODE_CHILD_IDX(DT_NODELABEL(disp_bl))
@@ -37,16 +46,29 @@ static uint8_t max_brightness = CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS;
 static uint8_t min_brightness = CONFIG_DONGLE_SCREEN_MIN_BRIGHTNESS;
 static int8_t current_brightness = CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS;
 
-static int8_t brightness_modifier = 0;
+static int8_t brightness_modifier = CONFIG_DONGLE_SCREEN_BRIGHTNESS_MODIFIER;
 
 static bool off_through_modifier = false; // Used to track if the screen was turned off through the brightness modifier
+
+/**
+ * @brief Structure to hold brightness calculation results
+ */
+struct brightness_result
+{
+    uint8_t adjusted_brightness;  // The adjusted base brightness value
+    int8_t adjusted_modifier;     // The adjusted modifier value
+    uint8_t effective_brightness; // Final brightness (adjusted_brightness + adjusted_modifier)
+    bool was_clamped;             // Whether any clamping occurred
+    bool hit_min_limit;           // Whether minimum limit was reached
+    bool hit_max_limit;           // Whether maximum limit was reached
+};
 
 static uint8_t clamp_brightness(int8_t value)
 {
     if (value > max_brightness)
     {
-        return max_brightness;
         LOG_WRN("CLAMPED: Screen brightness %d would be over %d", value, max_brightness);
+        return max_brightness;
     }
     if (value < min_brightness)
     {
@@ -55,10 +77,118 @@ static uint8_t clamp_brightness(int8_t value)
     }
     return value;
 }
+
 static void apply_brightness(uint8_t value)
 {
     led_set_brightness(pwm_leds_dev, DISP_BL, value);
     LOG_INF("Screen brightness set to %d", value);
+}
+
+static int8_t calculate_safe_modifier_change(uint8_t base_brightness, int8_t current_modifier, int8_t desired_change)
+{
+    int16_t current_effective = base_brightness + current_modifier;
+    int16_t desired_effective = current_effective + desired_change;
+
+    // Determine the appropriate boundary based on direction of change
+    int16_t boundary = (desired_change > 0) ? max_brightness : min_brightness;
+
+    // Check if the desired change is within bounds
+    if ((desired_change > 0 && desired_effective <= boundary) ||
+        (desired_change < 0 && desired_effective >= boundary))
+    {
+        return desired_change; // Full change is safe
+    }
+
+    // Calculate maximum safe change toward the boundary
+    int16_t safe_change = boundary - current_effective;
+
+    // Ensure we don't return a change in the wrong direction or zero when some change is possible
+    if ((desired_change > 0 && safe_change > 0) || (desired_change < 0 && safe_change < 0))
+    {
+        return (int8_t)safe_change;
+    }
+
+    return 0; // No safe change possible
+}
+
+static struct brightness_result calculate_brightness_with_bounds(uint8_t base_brightness, int8_t modifier, bool enforce_ambient_constraints)
+{
+    struct brightness_result result = {0};
+
+    // Start with clamped base brightness
+    result.adjusted_brightness = clamp_brightness(base_brightness);
+    result.adjusted_modifier = modifier;
+
+    // Handle ambient light constraints by adjusting base brightness
+    if (enforce_ambient_constraints)
+    {
+#if CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT
+        int16_t effective = result.adjusted_brightness + result.adjusted_modifier;
+        if (effective <= min_brightness)
+        {
+            // Need to increase base brightness to meet minimum
+            uint8_t needed_increase = min_brightness - effective + 1; // +1 to get above minimum
+            uint8_t old_brightness = result.adjusted_brightness;
+
+            result.adjusted_brightness = clamp_brightness(result.adjusted_brightness + needed_increase);
+            result.was_clamped = true;
+            result.hit_min_limit = true;
+
+            LOG_DBG("Ambient: brightness (%d) + modifier (%d) = %d below min (%d), adjusted brightness by +%d to %d, resulting in %d",
+                    old_brightness, modifier, effective, min_brightness,
+                    result.adjusted_brightness - old_brightness, result.adjusted_brightness,
+                    result.adjusted_brightness + modifier);
+        }
+        else if (effective > max_brightness)
+        {
+            // Need to decrease base brightness to stay within maximum
+            uint8_t needed_decrease = effective - max_brightness;
+            uint8_t old_brightness = result.adjusted_brightness;
+
+            if (result.adjusted_brightness >= needed_decrease)
+            {
+                result.adjusted_brightness -= needed_decrease;
+            }
+            else
+            {
+                result.adjusted_brightness = min_brightness;
+            }
+
+            result.was_clamped = true;
+            result.hit_max_limit = true;
+
+            LOG_DBG("Ambient: brightness (%d) + modifier (%d) = %d above max (%d), adjusted brightness by -%d to %d, resulting in %d",
+                    old_brightness, modifier, effective, max_brightness,
+                    old_brightness - result.adjusted_brightness, result.adjusted_brightness,
+                    result.adjusted_brightness + modifier);
+        }
+#endif
+    }
+
+    // Recalculate effective brightness after any ambient adjustments
+    result.effective_brightness = clamp_brightness(result.adjusted_brightness + result.adjusted_modifier);
+
+    // Final boundary check
+    if (result.effective_brightness <= min_brightness)
+    {
+        result.hit_min_limit = true;
+    }
+    if (result.effective_brightness >= max_brightness)
+    {
+        result.hit_max_limit = true;
+    }
+
+    return result;
+}
+
+static bool should_screen_turn_off(uint8_t base_brightness, int8_t modifier)
+{
+    return (base_brightness + modifier) < min_brightness;
+}
+
+static bool should_screen_turn_on(uint8_t base_brightness, int8_t modifier)
+{
+    return (base_brightness + modifier) > min_brightness;
 }
 
 // Threaded fade logic
@@ -78,7 +208,6 @@ K_MSGQ_DEFINE(fade_msgq, sizeof(struct fade_request_t), FADE_QUEUE_SIZE, 4);
 // Cubic ease-in-out function to smooth the interpolation curve.
 // Provides a natural "S-curve" animation effect: starts slow, accelerates, then slows again.
 // Helps avoid abrupt changes in perceived brightness.
-// delete old cpu heavy cons calculation
 static float ease_in_out(float t)
 {
     if (t < 0.5f)
@@ -159,28 +288,12 @@ static void fade_to_brightness(uint8_t from, uint8_t to)
 
 void set_screen_brightness(uint8_t value, bool ambient)
 {
-    int8_t new_brightness = clamp_brightness(value);
+    struct brightness_result result = calculate_brightness_with_bounds(value, brightness_modifier, ambient);
 
-#if CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT
-    // calculate how much the new_brightness must be increased if the result of new_brightness and brightness_modifier is less than min_brightness when ambient is false and is less than min_brightness when ambient is true
-    if (ambient && (new_brightness + brightness_modifier <= min_brightness))
-    {
-        int8_t raw_brightness = new_brightness;
-        new_brightness += min_brightness - (new_brightness + brightness_modifier);
-        LOG_DBG("Ambient brightness (%d) + modifier (%d) (=%d) is less than or equal to min_brightness (%d), adjusting new_brightness by +%d to result in = %d.",
-                raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, min_brightness, new_brightness, new_brightness + brightness_modifier);
-    }
-    else if (ambient && (new_brightness + brightness_modifier > max_brightness))
-    {
-        int8_t raw_brightness = new_brightness;
-        new_brightness -= (new_brightness + brightness_modifier) - max_brightness;
-        LOG_DBG("Ambient brightness (%d) + modifier (%d) (=%d) is more than max_brightness (%d), adjusting new_brightness by -%d to result in = %d.",
-                raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, max_brightness, raw_brightness - new_brightness, new_brightness + brightness_modifier);
-    }
-#endif
+    uint8_t current_effective = clamp_brightness(current_brightness + brightness_modifier);
 
-    fade_to_brightness(clamp_brightness(current_brightness + brightness_modifier), clamp_brightness(new_brightness + brightness_modifier));
-    current_brightness = new_brightness;
+    fade_to_brightness(current_effective, result.effective_brightness);
+    current_brightness = result.adjusted_brightness;
 }
 
 #if CONFIG_DONGLE_SCREEN_IDLE_TIMEOUT_S > 0 || CONFIG_DONGLE_SCREEN_BRIGHTNESS_KEYBOARD_CONTROL
@@ -192,16 +305,13 @@ static void screen_set_on(bool on)
 {
     if (on && !screen_on)
     {
-        // TODO: Decide what to do when current_brightness + brightness_modifier is less or equals than min_brightness
-        if (current_brightness + brightness_modifier <= 0)
+        // Use unified helper to check if we need brightness adjustment
+        if (should_screen_turn_off(current_brightness, brightness_modifier))
         {
-            int8_t raw_brightness = current_brightness;
-            current_brightness += 0 - (current_brightness + brightness_modifier) + 1;
-            LOG_DBG("SCREEN TURN ON Current brightness (%d) + modifier (%d) (=%d) is less than or equal to 0 (%d), adjusting current_brightness by +%d and adding additional +1 to result in = %d.",
-                    raw_brightness, brightness_modifier, raw_brightness + brightness_modifier, 0, current_brightness, current_brightness + brightness_modifier);
+            struct brightness_result result = calculate_brightness_with_bounds(current_brightness, brightness_modifier, false);
+            current_brightness = result.adjusted_brightness;
+            LOG_DBG("SCREEN TURN ON: Adjusted brightness to ensure screen can turn on: %d", current_brightness);
         }
-
-        //
 
         fade_to_brightness(0, clamp_brightness(current_brightness + brightness_modifier));
         screen_on = true;
@@ -270,85 +380,50 @@ static void increase_brightness(void)
 {
     LOG_DBG("Current brightness: %d, current modifier: %d", current_brightness, brightness_modifier);
 
-    int16_t next = (int16_t)current_brightness + brightness_modifier + CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-    LOG_DBG("Next brightness would be: %d Maximum brightness is: %d", next, max_brightness);
+    int8_t safe_increase = calculate_safe_modifier_change(current_brightness, brightness_modifier, CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP);
 
-    if (next <= max_brightness)
+    if (safe_increase > 0)
     {
-        brightness_modifier += CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-        LOG_DBG("New Brightness modifier: %d", brightness_modifier);
+        brightness_modifier += safe_increase;
+        LOG_DBG("Brightness modifier increased by %d to %d", safe_increase, brightness_modifier);
         set_screen_brightness(current_brightness, false);
+
+        // Check if we should turn screen on
+        if (should_screen_turn_on(current_brightness, brightness_modifier) && off_through_modifier)
+        {
+            LOG_INF("Brightness sufficient to turn screen on");
+            screen_set_on(true);
+        }
     }
     else
     {
-        LOG_WRN("Brightness modifier would be too high, calculating possible value.");
-        // calculate how much the brightness_modifier can be increased by using next and max_brightness
-        int16_t increase_possible = max_brightness - (int16_t)current_brightness - brightness_modifier;
-        if (increase_possible > 0)
-        {
-            LOG_DBG("Brightness modifier can be increased by %d", increase_possible);
-
-            brightness_modifier += increase_possible;
-            LOG_DBG("Brightness modifier increased to %d", brightness_modifier);
-            set_screen_brightness(current_brightness, false);
-        }
-        else
-        {
-            LOG_DBG("Brightness modifier cannot be increased further.");
-        }
-    }
-
-    // TODO: Decide if change:
-    // If the brightness_modifier is so small that the display remains off because current_brightness + brightness_modifier <= min_brightness,
-    // then the display should still be turned on.
-    // This is to ensure that the display is turned on when the brightness is increased, even if the modifier is small enough to keep it off.
-
-    if ((current_brightness + brightness_modifier > min_brightness) && off_through_modifier)
-    {
-
-        LOG_WRN("Current brightness (%d) + modifier (%d) = %d is more than min_brightness (%d), setting screen on.",
-                current_brightness, brightness_modifier, current_brightness + brightness_modifier, min_brightness);
-        screen_set_on(true);
+        LOG_DBG("Brightness modifier cannot be increased further (at maximum)");
     }
 }
 
 static void decrease_brightness(void)
 {
     LOG_DBG("Current brightness: %d, current modifier: %d", current_brightness, brightness_modifier);
-    int16_t next = (int16_t)current_brightness + brightness_modifier - CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-    LOG_DBG("Next brightness would be: %d Minimum brightness is: %d", next, min_brightness);
-    if (next >= min_brightness)
-    {
-        brightness_modifier -= CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP;
-        LOG_DBG("New Brightness modifier: %d", brightness_modifier);
+
+    int8_t safe_decrease = calculate_safe_modifier_change(current_brightness, brightness_modifier, -CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP);
+
+    if (safe_decrease < 0)
+    {                                         // safe_decrease will be negative for decreases
+        brightness_modifier += safe_decrease; // Adding a negative value decreases
+        LOG_DBG("Brightness modifier decreased by %d to %d", -safe_decrease, brightness_modifier);
         set_screen_brightness(current_brightness, false);
+
+        // Check if we should turn screen off
+        if (should_screen_turn_off(current_brightness, brightness_modifier))
+        {
+            LOG_INF("Brightness too low, turning screen off");
+            off_through_modifier = true;
+            screen_set_on(false);
+        }
     }
     else
     {
-        LOG_WRN("Brightness modifier would be too low, calculating possible value.");
-        // calculate how much the brightness_modifier can be decreased by using next and min_brightness
-        int16_t decrease_possible = (int16_t)current_brightness + brightness_modifier - min_brightness;
-        if (decrease_possible > 0)
-        {
-            LOG_DBG("Brightness modifier can be decreased by %d", decrease_possible);
-
-            brightness_modifier -= decrease_possible;
-            LOG_DBG("Brightness modifier decreased to %d", brightness_modifier);
-            set_screen_brightness(current_brightness, false);
-        }
-        else
-        {
-            LOG_DBG("Brightness modifier cannot be decreased further.");
-        }
-    }
-
-    if (current_brightness + brightness_modifier < min_brightness)
-    {
-
-        LOG_WRN("Current brightness (%d) + modifier (%d) = %d is less than min_brightness (%d), setting screen off.",
-                current_brightness, brightness_modifier, current_brightness + brightness_modifier, min_brightness);
-        off_through_modifier = true; // Track that the screen was turned off through the
-        screen_set_on(false);
+        LOG_DBG("Brightness modifier cannot be decreased further (at minimum)");
     }
 }
 
@@ -426,15 +501,23 @@ ZMK_SUBSCRIPTION(screen_idle, zmk_layer_state_changed);
 static const struct device *ambient_sensor = DEVICE_DT_GET(AMBIENT_LIGHT_SENSOR_NODE);
 
 // Passe diese Werte nach deinen Messungen an!
-const int32_t min_sensor = 0;
-const int32_t max_sensor = 100; // TODO: Find real values!
+const int32_t min_sensor = CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE;
+const int32_t max_sensor = CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MAX_RAW_VALUE;
 
 static uint8_t ambient_to_brightness(int32_t sensor_value)
 {
     if (sensor_value < min_sensor)
+    {
+        LOG_INF("Ambient sensor reading (%d) below DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE: (%d) Will set the sensor reading to the maximum configured.", sensor_value, CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE);
         sensor_value = min_sensor;
+    }
+
     if (sensor_value > max_sensor)
+    {
+        LOG_INF("Ambient sensor reading (%d) above DONGLE_SCREEN_AMBIENT_LIGHT_MAX_RAW_VALUE: (%d) Will set the sensor reading to the maximum configured.", sensor_value, CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MAX_RAW_VALUE);
         sensor_value = max_sensor;
+    }
+
     uint8_t brightness = min_brightness +
                          ((sensor_value - min_sensor) * (max_brightness - min_brightness)) /
                              (max_sensor - min_sensor);
@@ -454,13 +537,6 @@ static void ambient_light_thread(void)
         if (!device_is_ready(ambient_sensor))
         {
             LOG_ERR("Ambient light sensor not ready!");
-            // TODO: DELETE ME ONLY FOR TESTING!
-            /*if (screen_on)
-            {
-                uint8_t new_brightness = 5;
-                set_screen_brightness(new_brightness, true);
-                last_brightness = new_brightness;
-            }*/
             k_sleep(K_SECONDS(5));
             continue;
         }
@@ -475,29 +551,22 @@ static void ambient_light_thread(void)
         val.val1 = random0to100();
 
 #endif
-                LOG_DBG("APDS9960 raw: %d", val.val1);
                 uint8_t new_brightness = ambient_to_brightness(val.val1);
-                if (abs(new_brightness - last_brightness) > 5)
+
+                if (abs(new_brightness - last_brightness) > BRIGHTNESS_CHANGE_THRESHOLD)
                 {
-                    // TODO: revisit this threshold
-                    // TODO: Do I still need this when the if in set_screen_brightness() is there?
-                    if (min_brightness > new_brightness + brightness_modifier)
-                    {
-                        LOG_DBG("Brightness (%d) incl. modifier (%d) (=%d) would be lower than ambient minimum setting (%d). Raw sensor value is: %d",
-                                new_brightness, brightness_modifier, new_brightness + brightness_modifier, min_brightness, val.val1);
+                    struct brightness_result result = calculate_brightness_with_bounds(new_brightness, brightness_modifier, true);
 
-                        // new_brightness = min_brightness;
-                    }
-                    else if (new_brightness + brightness_modifier > max_brightness)
-                    {
-                        LOG_DBG("Brightness (%d) incl. modifier (%d) (=%d) would be higher than maximum setting (%d). Raw sensor value is: %d",
-                                new_brightness, brightness_modifier, new_brightness + brightness_modifier, max_brightness, val.val1);
+                    LOG_DBG("Ambient light: %d (raw) -> brightness %d, effective (incl. modifier) %d",
+                            val.val1, result.adjusted_brightness, result.effective_brightness);
 
-                        // new_brightness = max_brightness;
-                    }
-                    else
+                    if (result.hit_min_limit)
                     {
-                        LOG_DBG("Ambient light: %d (raw) -> brightness %d + modifier %d = %d", val.val1, new_brightness, brightness_modifier, new_brightness + brightness_modifier);
+                        LOG_DBG("Ambient brightness at minimum limit");
+                    }
+                    if (result.hit_max_limit)
+                    {
+                        LOG_DBG("Ambient brightness at maximum limit");
                     }
 
                     if (screen_on)
@@ -508,7 +577,7 @@ static void ambient_light_thread(void)
                     {
                         // If the screen is off, just set the brightness variable
                         // to have the current ambient brightness when the screen is turned on again
-                        current_brightness = new_brightness;
+                        current_brightness = result.adjusted_brightness;
                     }
                     last_brightness = new_brightness;
                 }

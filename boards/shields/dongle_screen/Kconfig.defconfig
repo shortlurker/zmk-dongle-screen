@@ -180,4 +180,25 @@ config DONGLE_SCREEN_AMBIENT_LIGHT_EVALUATION_INTERVAL_MS
     help
       The interval how often the ambient light level should be evaluated.
 
+config DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE
+    int "The minimum raw value for until your ambient sensor repects readings."
+    default 0
+    range 0 1999
+    help
+      Depending on the position and if the sensor is behind transparent plastic or not the sensor readings can be vary. Behind plastic the default value is proven good. If your ambient light changes are not too reactive you might change this.
+
+config DONGLE_SCREEN_AMBIENT_LIGHT_MAX_RAW_VALUE
+    int "The maximum raw value for until your ambient sensor repects readings."
+    default 100
+    range 100 3000
+    help
+      Depending on the position and if the sensor is behind transparent plastic or not the sensor readings can be vary. Behind plastic the default value is proven good. If your ambient light changes are not too reactive you might change this.
+
+config DONGLE_SCREEN_BRIGHTNESS_MODIFIER
+    int "The modifier to start the application with."
+    default 0
+    range -99 99
+    help
+      The modifier to start the dongle with. Useful if you found a modifier comfortable for you. Espacially for ambient light. Otherwise no need to change.
+
 endif
