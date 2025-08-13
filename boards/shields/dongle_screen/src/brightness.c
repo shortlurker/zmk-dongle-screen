@@ -508,7 +508,7 @@ static uint8_t ambient_to_brightness(int32_t sensor_value)
 {
     if (sensor_value < min_sensor)
     {
-        LOG_INF("Ambient sensor reading (%d) below DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE: (%d) Will set the sensor reading to the maximum configured.", sensor_value, CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE);
+        LOG_INF("Ambient sensor reading (%d) below DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE: (%d) Will set the sensor reading to the minimum configured.", sensor_value, CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE);
         sensor_value = min_sensor;
     }
 
