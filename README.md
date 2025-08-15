@@ -76,7 +76,7 @@ This module provides several widgets to visualize the current state of your ZMK-
 ## Installation
 
 **IMPORTANT NOTICE**  
-As of July 2025 this module is not compatible with the lastest ZMK release v0.2.1 because this is missing a [commit](https://github.com/zmkfirmware/zmk/commit/147c340c6e8d377304acfdd64dc86cf83ebdfef2) which added dependencies needed for this module. Please make sure to at least pin your `zmk` `revision: ` to commit sha `147c340c6e8d377304acfdd64dc86cf83ebdfef2` or `main` (which might not be advised anymore by the ZMK team. More [information here](https://zmk.dev/blog/2025/06/20/pinned-zmk).)
+As of July 2025 this module is not compatible with the lastest ZMK release v0.2.1 because this is missing a [commit](https://github.com/zmkfirmware/zmk/commit/147c340c6e8d377304acfdd64dc86cf83ebdfef2) which added dependencies needed for this module. Please make sure to at least pin your `zmk` `revision:` to commit sha `147c340c6e8d377304acfdd64dc86cf83ebdfef2` or `main` (which might not be advised anymore by the ZMK team. More [information here](https://zmk.dev/blog/2025/06/20/pinned-zmk).)
 
 1. This guide assumes that you have already implemented a basic dongle setup as described [here](https://zmk.dev/docs/development/hardware-integration/dongle).
 2. Once this is done, add this repository to your `west.yaml`.  
@@ -168,27 +168,27 @@ include:
 
 | Name                                                    | Type | Default | Description                                                                                                                                                      |
 | -------------------------------------------             | ---- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DONGLE_SCREEN_HORIZONTAL`                              | bool | y       | Orientation of the screen. By default, it is horizontal (laying on the side).                                                                                    |
-| `DONGLE_SCREEN_FLIPPED`                                 | bool | n       | Should the screen orientation be flipped in horizontal or vertical orientation?                                                                                  |
-| `DONGLE_SCREEN_AMBIENT_LIGHT`                           | bool | n       | If enabled, the ambient light sensor will be used to automatically adjust screen brightness.                                                                     |
-| `DONGLE_SCREEN_AMBIENT_LIGHT_EVALUATION_INTERVAL_MS`    | int  | 1000    | The interval how often the ambient light level should be evaluated.                                                                                              |
-| `DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE`             | int  | 0       | Depending on the position and if the sensor is behind transparent plastic or not the sensor readings can be vary. Behind plastic the default value is proven good. If your ambient light changes are not too reactive you might change this. |
-| `DONGLE_SCREEN_AMBIENT_LIGHT_MAX_RAW_VALUE`             | int  | 100     | Depending on the position and if the sensor is behind transparent plastic or not the sensor readings can be vary. Behind plastic the default value is proven good. If your ambient light changes are not too reactive you might change this. |
-| `DONGLE_SCREEN_IDLE_TIMEOUT_S`                          | int  | 600     | Screen idle timeout in seconds (0 = never off). Time in seconds after which the screen turns off when idle.                                                      |
-| `DONGLE_SCREEN_MAX_BRIGHTNESS`                          | int  | 80      | Maximum screen brightness (1-100). This is the brightness used when the dongle is powered on and the maximum used by the dimmer.                                 |
-| `DONGLE_SCREEN_MIN_BRIGHTNESS`                          | int  | 1       | Minimum screen brightness (1-99). This is the brightness used as a minimum value for brightness adjustments with the modifier keys and the ambient light sensor. |
-| `DONGLE_SCREEN_BRIGHTNESS_MODIFIER`                     | int  | 0       | The modifier to start the dongle with. Useful if you found a modifier comfortable for you. Espacially for ambient light. Otherwise no need to change.            |
-| `DONGLE_SCREEN_TOGGLE_KEYCODE`                          | int  | 113     | Keycode that toggles the screen off and on (default: F22).                                                                                                       |
-| `DONGLE_SCREEN_BRIGHTNESS_KEYBOARD_CONTROL`             | bool | y       | Allows controlling the screen brightness via keyboard (e.g., F23/F24).                                                                                           |
-| `DONGLE_SCREEN_BRIGHTNESS_UP_KEYCODE`                   | int  | 115     | Keycode for increasing screen brightness (default: F24).                                                                                                         |
-| `DONGLE_SCREEN_BRIGHTNESS_DOWN_KEYCODE`                 | int  | 114     | Keycode for decreasing screen brightness (default: F23).                                                                                                         |
-| `DONGLE_SCREEN_BRIGHTNESS_STEP`                         | int  | 10      | Step for brightness adjustment with keyboard. How much brightness (range MIN_BRIGHTNESS to MAX_BRIGHTNESS) should be applied per keystroke.                      |
-| `DONGLE_SCREEN_WPM_ACTIVE`                              | bool | y       | If the WPM Widget should be active or not.                                                                                                                       |
-| `DONGLE_SCREEN_MODIFIER_ACTIVE`                         | bool | y       | If the Modifier Widget should be active or not.                                                                                                                  |
-| `DONGLE_SCREEN_LAYER_ACTIVE`                            | bool | y       | If the Layer Widget should be active or not.                                                                                                                     |
-| `DONGLE_SCREEN_OUTPUT_ACTIVE`                           | bool | y       | If the Output Widget should be active or not.                                                                                                                    |
-| `DONGLE_SCREEN_BATTERY_ACTIVE`                          | bool | y       | If the Battery Widget should be active or not.                                                                                                                   |
-| `DONGLE_SCREEN_AMBIENT_LIGHT_TEST`                      | bool | n       | If enabled, the ambient light sensor will be mocked to adjust screen brightness.                                                                                 |
+| `CONFIG_DONGLE_SCREEN_HORIZONTAL`                              | bool | y       | Orientation of the screen. By default, it is horizontal (laying on the side).                                                                                    |
+| `CONFIG_DONGLE_SCREEN_FLIPPED`                                 | bool | n       | Should the screen orientation be flipped in horizontal or vertical orientation?                                                                                  |
+| `CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT`                           | bool | n       | If enabled, the ambient light sensor will be used to automatically adjust screen brightness.                                                                     |
+| `CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_EVALUATION_INTERVAL_MS`    | int  | 1000    | The interval how often the ambient light level should be evaluated.                                                                                              |
+| `CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MIN_RAW_VALUE`             | int  | 0       | Depending on the position and if the sensor is behind transparent plastic or not the sensor readings can be vary. Behind plastic the default value is proven good. If your ambient light changes are not too reactive you might change this. |
+| `CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_MAX_RAW_VALUE`             | int  | 100     | Depending on the position and if the sensor is behind transparent plastic or not the sensor readings can be vary. Behind plastic the default value is proven good. If your ambient light changes are not too reactive you might change this. |
+| `CONFIG_DONGLE_SCREEN_IDLE_TIMEOUT_S`                          | int  | 600     | Screen idle timeout in seconds (0 = never off). Time in seconds after which the screen turns off when idle.                                                      |
+| `CONFIG_DONGLE_SCREEN_MAX_BRIGHTNESS`                          | int  | 80      | Maximum screen brightness (1-100). This is the brightness used when the dongle is powered on and the maximum used by the dimmer.                                 |
+| `CONFIG_DONGLE_SCREEN_MIN_BRIGHTNESS`                          | int  | 1       | Minimum screen brightness (1-99). This is the brightness used as a minimum value for brightness adjustments with the modifier keys and the ambient light sensor. |
+| `CONFIG_DONGLE_SCREEN_BRIGHTNESS_MODIFIER`                     | int  | 0       | The modifier to start the dongle with. Useful if you found a modifier comfortable for you. Espacially for ambient light. Otherwise no need to change.            |
+| `CONFIG_DONGLE_SCREEN_TOGGLE_KEYCODE`                          | int  | 113     | Keycode that toggles the screen off and on (default: F22).                                                                                                       |
+| `CONFIG_DONGLE_SCREEN_BRIGHTNESS_KEYBOARD_CONTROL`             | bool | y       | Allows controlling the screen brightness via keyboard (e.g., F23/F24).                                                                                           |
+| `CONFIG_DONGLE_SCREEN_BRIGHTNESS_UP_KEYCODE`                   | int  | 115     | Keycode for increasing screen brightness (default: F24).                                                                                                         |
+| `CONFIG_DONGLE_SCREEN_BRIGHTNESS_DOWN_KEYCODE`                 | int  | 114     | Keycode for decreasing screen brightness (default: F23).                                                                                                         |
+| `CONFIG_DONGLE_SCREEN_BRIGHTNESS_STEP`                         | int  | 10      | Step for brightness adjustment with keyboard. How much brightness (range MIN_BRIGHTNESS to MAX_BRIGHTNESS) should be applied per keystroke.                      |
+| `CONFIG_DONGLE_SCREEN_WPM_ACTIVE`                              | bool | y       | If the WPM Widget should be active or not.                                                                                                                       |
+| `CONFIG_DONGLE_SCREEN_MODIFIER_ACTIVE`                         | bool | y       | If the Modifier Widget should be active or not.                                                                                                                  |
+| `CONFIG_DONGLE_SCREEN_LAYER_ACTIVE`                            | bool | y       | If the Layer Widget should be active or not.                                                                                                                     |
+| `CONFIG_DONGLE_SCREEN_OUTPUT_ACTIVE`                           | bool | y       | If the Output Widget should be active or not.                                                                                                                    |
+| `CONFIG_DONGLE_SCREEN_BATTERY_ACTIVE`                          | bool | y       | If the Battery Widget should be active or not.                                                                                                                   |
+| `CONFIG_DONGLE_SCREEN_AMBIENT_LIGHT_TEST`                      | bool | n       | If enabled, the ambient light sensor will be mocked to adjust screen brightness.                                                                                 |
 
 ## Example Configuration (`prj.conf`)
 
@@ -223,6 +223,7 @@ The recommended procedure is as follows:
 8. Switch on the right half
 
 ### Reset Dongle
+
 If the dongle has already been paired with both keyboard halves and the battery widget displays swapped indicators (i.e., the left battery indicator refers to the right keyboard half), a full reset of the dongle is required.
 
 To achieve this, an appropriate configuration for the specific microcontroller must be added to the `build.yaml` in order to generate a `settings_reset-[microcontroller-name]-zmk.uf2` image. This image enables the complete removal of all stored pairing data from the dongle.
