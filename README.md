@@ -12,6 +12,10 @@ It offers various widgets for current output, displaying layer, mod, WPM, and ba
 
 <https://github.com/user-attachments/assets/86c33af6-d83e-4e2a-9766-fc8836e896f1>
 
+### Brightness changes with ambient light sensor and screen toggle
+
+https://github.com/user-attachments/assets/3379f79c-af90-4763-8ba5-8a8f34fd66cf
+
 ## Building a dongle
 
 To build a dongle yourself you can use the build guide by **carrefinho** ([prospector project](https://github.com/carrefinho/prospector)).  
