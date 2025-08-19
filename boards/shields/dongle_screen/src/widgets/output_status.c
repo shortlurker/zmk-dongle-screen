@@ -91,7 +91,8 @@ static void set_status_symbol(struct zmk_widget_output_status *widget, struct ou
             snprintf(transport_text, sizeof(transport_text), "#%s USB#\n> #%s BLE#", usb_color, ble_color);
             break;
     #else
-        snprintf(transport_text, sizeof(transport_text), "> #%s USB#", usb_color);
+        case ZMK_TRANSPORT_USB:
+            snprintf(transport_text, sizeof(transport_text), "> #%s USB#", usb_color);
     #endif
     }
 
