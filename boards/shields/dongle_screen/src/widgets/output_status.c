@@ -81,20 +81,20 @@ static void set_status_symbol(struct zmk_widget_output_status *widget, struct ou
         ble_color = "ffffff";
     }
 
-    switch (state.selected_endpoint.transport)
-    {
-    #if IS_ENABLED(CONFIG_ZMK_BLE)    
-        case ZMK_TRANSPORT_USB:
-            snprintf(transport_text, sizeof(transport_text), "> #%s USB#\n#%s BLE#", usb_color, ble_color);
-            break;
-        case ZMK_TRANSPORT_BLE:
-            snprintf(transport_text, sizeof(transport_text), "#%s USB#\n> #%s BLE#", usb_color, ble_color);
-            break;
+    #if IS_ENABLED(CONFIG_ZMK_BLE)  
+        switch (state.selected_endpoint.transport)
+        {  
+            case ZMK_TRANSPORT_USB:
+                snprintf(transport_text, sizeof(transport_text), "> #%s USB#\n#%s BLE#", usb_color, ble_color);
+                break;
+            case ZMK_TRANSPORT_BLE:
+                snprintf(transport_text, sizeof(transport_text), "#%s USB#\n> #%s BLE#", usb_color, ble_color);
+                break;
+        }
     #else
-        case ZMK_TRANSPORT_USB:
-            snprintf(transport_text, sizeof(transport_text), "> #%s USB#", usb_color);
+        snprintf(transport_text, sizeof(transport_text), "> #%s USB#", usb_color);
     #endif
-    }
+
 
     lv_label_set_recolor(widget->transport_label, true);
     lv_obj_set_style_text_align(widget->transport_label, LV_TEXT_ALIGN_RIGHT, 0);
