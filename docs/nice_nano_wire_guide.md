@@ -28,7 +28,9 @@
 
 Follow README installation and replace `seeeduino_xiao_ble` with `nice_nano_v2` for step 3 in your `build.yaml`.
 
-[3D print rear cap](/docs/3d_files/) modified and tested with SuperMini nRF52840. nice!nano fit untested, might be tight.  
+[3D print rear cap](/docs/3d_files/) modified and tested with SuperMini nRF52840.   
 - Two versions, with and without reset button.  
 - 6x6x6mm tactile button used for reset.  
 - No supports needed.  
+
+nice!nano fit untested, might be tight. Would like feedback. 
