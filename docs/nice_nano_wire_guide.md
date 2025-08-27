@@ -32,5 +32,6 @@ Follow README installation and replace `seeeduino_xiao_ble` with `nice_nano_v2` 
 - Two versions, with and without reset button.  
 - 6x6x6mm tactile button used for reset.  
 - No supports needed.  
+- Rear cap only. Print the display mount and main body from [Prospector](https://github.com/carrefinho/prospector/tree/main/case).
 
 nice!nano fit untested, might be tight. Would like feedback. 
