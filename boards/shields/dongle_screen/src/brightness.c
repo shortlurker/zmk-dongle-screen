@@ -5,7 +5,7 @@
 #include <zephyr/logging/log.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/keycode_state_changed.h>
-#include <zmk/events/layer_state_changed.h>
+#include <zmk/events/activity_state_changed.h>
 #include <math.h>
 #include <stdlib.h>
 
@@ -518,7 +518,7 @@ static int key_listener(const zmk_event_t *eh)
 
 ZMK_LISTENER(screen_idle, key_listener);
 ZMK_SUBSCRIPTION(screen_idle, zmk_keycode_state_changed);
-ZMK_SUBSCRIPTION(screen_idle, zmk_layer_state_changed);
+ZMK_SUBSCRIPTION(screen_idle, zmk_activity_state_changed);
 
 #endif
 
