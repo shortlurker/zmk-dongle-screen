@@ -5,7 +5,6 @@
  */
 
 #include <zephyr/kernel.h>
-//#include <zephyr/bluetooth/services/bas.h>
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
@@ -14,6 +13,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/event_manager.h>
 #include <zmk/events/wpm_state_changed.h>
 #include <zmk/wpm.h>
+
+#include <zmk/hid.h>
 
 #include "luna.h"
 
@@ -30,21 +31,18 @@ LV_IMG_DECLARE(dog_run2);
 LV_IMG_DECLARE(dog_sneak1);
 LV_IMG_DECLARE(dog_sneak2);
 
-// #define ANIMATION_SPEED_IDLE 10000
 #define ANIMATION_SPEED_IDLE 960
 const lv_img_dsc_t *idle_imgs[] = {
     &dog_sit1,
     &dog_sit2,
 };
 
-// #define ANIMATION_SPEED_SLOW 2000
 #define ANIMATION_SPEED_SLOW 200
 const lv_img_dsc_t *slow_imgs[] = {
     &dog_walk1,
     &dog_walk2,
 };
 
-// #define ANIMATION_SPEED_MID 500
 #define ANIMATION_SPEED_MID 200
 const lv_img_dsc_t *mid_imgs[] = {
     &dog_walk1,
@@ -57,6 +55,12 @@ const lv_img_dsc_t *fast_imgs[] = {
     &dog_run2,
 };
 
+#define ANIMATION_SPEED_SNEAK 200
+const lv_img_dsc_t *sneak_imgs[] = {
+    &dog_sneak1,
+    &dog_sneak2,
+};
+
 struct luna_wpm_status_state {
     uint8_t wpm;
 };
@@ -66,11 +70,21 @@ enum anim_state {
     anim_state_idle,
     anim_state_slow,
     anim_state_mid,
-    anim_state_fast
+    anim_state_fast,
+    anim_state_sneak
 } current_anim_state;
 
 static void set_animation(lv_obj_t *animing, struct luna_wpm_status_state state) {
-    if (state.wpm < 15) { // def: 5
+    uint8_t mods = zmk_hid_get_keyboard_report()->body.modifiers;
+    if (mods & (MOD_LCTL | MOD_RCTL)) {
+        if (current_anim_state != anim_state_sneak) {
+            lv_animimg_set_src(animing, SRC(sneak_imgs));
+            lv_animimg_set_duration(animing, ANIMATION_SPEED_SNEAK);
+            lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
+            lv_animimg_start(animing);
+            current_anim_state = anim_state_sneak;
+        }
+    } else if (state.wpm < 15) {
         if (current_anim_state != anim_state_idle) {
             lv_animimg_set_src(animing, SRC(idle_imgs));
             lv_animimg_set_duration(animing, ANIMATION_SPEED_IDLE);

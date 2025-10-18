@@ -67,7 +67,7 @@ lv_obj_t *zmk_display_status_screen()
 //    zmk_widget_wpm_status_init(&wpm_status_widget, screen);
 //    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_LEFT, 20, 20);
     zmk_widget_luna_init(&luna_widget, screen);
-    lv_obj_align(zmk_widget_luna_obj(&luna_widget), LV_ALIGN_TOP_LEFT, 20, 20);
+    lv_obj_align(zmk_widget_luna_obj(&luna_widget), LV_ALIGN_TOP_LEFT, 20, 24);
 #endif
 
 #if CONFIG_DONGLE_SCREEN_LAYER_ACTIVE
