@@ -223,4 +223,10 @@ config DONGLE_SCREEN_LUNA
     default n
     help
         Show Luna the dog
+
+config DONGLE_SCREEN_BONGO_CAT
+    bool "Bongo Cat"
+    default n
+    help
+        Show Bongo Cat
 endif

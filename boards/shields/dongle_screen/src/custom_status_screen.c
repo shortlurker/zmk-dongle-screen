@@ -24,6 +24,9 @@ static struct zmk_widget_dongle_battery_status dongle_battery_status_widget;
 #if CONFIG_DONGLE_SCREEN_LUNA
 #include "widgets/luna.h"
 static struct zmk_widget_luna luna_widget;
+#elif CONFIG_DONGLE_SCREEN_BONGO_CAT
+#include "widgets/bongo_cat.h"
+static struct zmk_widget_bongo_cat bongo_cat_widget;
 #else
     #if CONFIG_DONGLE_SCREEN_WPM_ACTIVE
     #include "widgets/wpm_status.h"
@@ -69,6 +72,9 @@ lv_obj_t *zmk_display_status_screen()
 #if CONFIG_DONGLE_SCREEN_LUNA
     zmk_widget_luna_init(&luna_widget, screen);
     lv_obj_align(zmk_widget_luna_obj(&luna_widget), LV_ALIGN_TOP_LEFT, 20, 24);
+#elif CONFIG_DONGLE_SCREEN_BONGO_CAT
+    zmk_widget_bongo_cat_init(&bongo_cat_widget, screen);
+    lv_obj_align(zmk_widget_bongo_cat_obj(&bongo_cat_widget), LV_ALIGN_TOP_LEFT, 20, 10); 
 #else
     #if CONFIG_DONGLE_SCREEN_WPM_ACTIVE
         zmk_widget_wpm_status_init(&wpm_status_widget, screen);
