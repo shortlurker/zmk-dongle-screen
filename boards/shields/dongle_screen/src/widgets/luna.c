@@ -14,9 +14,8 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/events/wpm_state_changed.h>
 #include <zmk/wpm.h>
 
-#include <zmk/event_manager.h>
-#include <zmk/events/hid_indicators_changed.h>
 #include <zmk/hid_indicators.h>
+#include <zmk/events/hid_indicators_changed.h>
 #include "luna.h"
 
 #define LED_CLCK 0x02
@@ -36,26 +35,20 @@ LV_IMG_DECLARE(dog_sneak2);
 LV_IMG_DECLARE(dog_bark1);
 LV_IMG_DECLARE(dog_bark2);
 
-#define ANIMATION_SPEED_IDLE 960
-const lv_img_dsc_t *idle_imgs[] = {
+#define ANIMATION_SPEED_SIT 960
+const lv_img_dsc_t *sit_imgs[] = {
     &dog_sit1,
     &dog_sit2,
 };
 
-#define ANIMATION_SPEED_SLOW 200
-const lv_img_dsc_t *slow_imgs[] = {
+#define ANIMATION_SPEED_WALK 200
+const lv_img_dsc_t *walk_imgs[] = {
     &dog_walk1,
     &dog_walk2,
 };
 
-#define ANIMATION_SPEED_MID 200
-const lv_img_dsc_t *mid_imgs[] = {
-    &dog_walk1,
-    &dog_walk2,
-};
-
-#define ANIMATION_SPEED_FAST 200
-const lv_img_dsc_t *fast_imgs[] = {
+#define ANIMATION_SPEED_RUN 200
+const lv_img_dsc_t *run_imgs[] = {
     &dog_run1,
     &dog_run2,
 };
@@ -77,19 +70,16 @@ struct luna_wpm_status_state {
 
 enum anim_state {
     anim_state_none,
-    anim_state_idle,
-    anim_state_slow,
-    anim_state_mid,
-    anim_state_fast,
+    anim_state_sit,
+    anim_state_walk,
+    anim_state_run,
     anim_state_sneak,
     anim_state_bark
 } current_anim_state;
 
-static bool caps = false;
-
 static void set_animation(lv_obj_t *animing, struct luna_wpm_status_state state) {
     uint8_t mods = zmk_hid_get_keyboard_report()->body.modifiers;
-    caps = (zmk_hid_indicators_get_current_profile() & LED_CLCK);
+    bool caps = (zmk_hid_indicators_get_current_profile() & LED_CLCK);
 
     if (caps) {
         if (current_anim_state != anim_state_bark) {
@@ -106,38 +96,30 @@ static void set_animation(lv_obj_t *animing, struct luna_wpm_status_state state)
             lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
             lv_animimg_start(animing);
             current_anim_state = anim_state_sneak;
-        }    
-    } else if (state.wpm < 15) {
-        if (current_anim_state != anim_state_idle) {
-            lv_animimg_set_src(animing, SRC(idle_imgs));
-            lv_animimg_set_duration(animing, ANIMATION_SPEED_IDLE);
-            lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
-            lv_animimg_start(animing);
-            current_anim_state = anim_state_idle;
         }
-    } else if (state.wpm < 30) {
-        if (current_anim_state != anim_state_slow) {
-            lv_animimg_set_src(animing, SRC(slow_imgs));
-            lv_animimg_set_duration(animing, ANIMATION_SPEED_SLOW);
+    } else if (state.wpm < 10) {
+        if (current_anim_state != anim_state_sit) {
+            lv_animimg_set_src(animing, SRC(sit_imgs));
+            lv_animimg_set_duration(animing, ANIMATION_SPEED_SIT);
             lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
             lv_animimg_start(animing);
-            current_anim_state = anim_state_slow;
+            current_anim_state = anim_state_sit;
         }
     } else if (state.wpm < 70) {
-        if (current_anim_state != anim_state_mid) {
-            lv_animimg_set_src(animing, SRC(mid_imgs));
-            lv_animimg_set_duration(animing, ANIMATION_SPEED_MID);
+        if (current_anim_state != anim_state_walk) {
+            lv_animimg_set_src(animing, SRC(walk_imgs));
+            lv_animimg_set_duration(animing, ANIMATION_SPEED_WALK);
             lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
             lv_animimg_start(animing);
-            current_anim_state = anim_state_mid;
+            current_anim_state = anim_state_walk;
         }
     } else {
-        if (current_anim_state != anim_state_fast) {
-            lv_animimg_set_src(animing, SRC(fast_imgs));
-            lv_animimg_set_duration(animing, ANIMATION_SPEED_FAST);
+        if (current_anim_state != anim_state_run) {
+            lv_animimg_set_src(animing, SRC(run_imgs));
+            lv_animimg_set_duration(animing, ANIMATION_SPEED_RUN);
             lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
             lv_animimg_start(animing);
-            current_anim_state = anim_state_fast;
+            current_anim_state = anim_state_run;
         }
     }
 }

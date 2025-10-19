@@ -21,11 +21,14 @@ static struct zmk_widget_layer_status layer_status_widget;
 static struct zmk_widget_dongle_battery_status dongle_battery_status_widget;
 #endif
 
-#if CONFIG_DONGLE_SCREEN_WPM_ACTIVE
-//#include "widgets/wpm_status.h"
-//static struct zmk_widget_wpm_status wpm_status_widget;
+#if CONFIG_DONGLE_SCREEN_LUNA
 #include "widgets/luna.h"
 static struct zmk_widget_luna luna_widget;
+#else
+    #if CONFIG_DONGLE_SCREEN_WPM_ACTIVE
+    #include "widgets/wpm_status.h"
+    static struct zmk_widget_wpm_status wpm_status_widget;
+    #endif
 #endif
 
 #if CONFIG_DONGLE_SCREEN_MODIFIER_ACTIVE
@@ -63,11 +66,14 @@ lv_obj_t *zmk_display_status_screen()
     lv_obj_align(zmk_widget_dongle_battery_status_obj(&dongle_battery_status_widget), LV_ALIGN_BOTTOM_MID, 0, 0);
 #endif
 
-#if CONFIG_DONGLE_SCREEN_WPM_ACTIVE
-//    zmk_widget_wpm_status_init(&wpm_status_widget, screen);
-//    lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_LEFT, 20, 20);
+#if CONFIG_DONGLE_SCREEN_LUNA
     zmk_widget_luna_init(&luna_widget, screen);
     lv_obj_align(zmk_widget_luna_obj(&luna_widget), LV_ALIGN_TOP_LEFT, 20, 24);
+#else
+    #if CONFIG_DONGLE_SCREEN_WPM_ACTIVE
+        zmk_widget_wpm_status_init(&wpm_status_widget, screen);
+        lv_obj_align(zmk_widget_wpm_status_obj(&wpm_status_widget), LV_ALIGN_TOP_LEFT, 20, 20);
+    #endif
 #endif
 
 #if CONFIG_DONGLE_SCREEN_LAYER_ACTIVE
