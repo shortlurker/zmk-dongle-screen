@@ -14,9 +14,12 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zmk/events/wpm_state_changed.h>
 #include <zmk/wpm.h>
 
-#include <zmk/hid.h>
-
+#include <zmk/event_manager.h>
+#include <zmk/events/hid_indicators_changed.h>
+#include <zmk/hid_indicators.h>
 #include "luna.h"
+
+#define LED_CLCK 0x02
 
 #define SRC(array) (const void **)array, sizeof(array) / sizeof(lv_img_dsc_t *)
 
@@ -30,6 +33,8 @@ LV_IMG_DECLARE(dog_run1);
 LV_IMG_DECLARE(dog_run2);
 LV_IMG_DECLARE(dog_sneak1);
 LV_IMG_DECLARE(dog_sneak2);
+LV_IMG_DECLARE(dog_bark1);
+LV_IMG_DECLARE(dog_bark2);
 
 #define ANIMATION_SPEED_IDLE 960
 const lv_img_dsc_t *idle_imgs[] = {
@@ -61,6 +66,11 @@ const lv_img_dsc_t *sneak_imgs[] = {
     &dog_sneak2,
 };
 
+#define ANIMATION_SPEED_BARK 200
+const lv_img_dsc_t *bark_imgs[] = {
+    &dog_bark1,
+    &dog_bark2,
+};
 struct luna_wpm_status_state {
     uint8_t wpm;
 };
@@ -71,19 +81,32 @@ enum anim_state {
     anim_state_slow,
     anim_state_mid,
     anim_state_fast,
-    anim_state_sneak
+    anim_state_sneak,
+    anim_state_bark
 } current_anim_state;
+
+static bool caps = false;
 
 static void set_animation(lv_obj_t *animing, struct luna_wpm_status_state state) {
     uint8_t mods = zmk_hid_get_keyboard_report()->body.modifiers;
-    if (mods & (MOD_LCTL | MOD_RCTL)) {
+    caps = (zmk_hid_indicators_get_current_profile() & LED_CLCK);
+
+    if (caps) {
+        if (current_anim_state != anim_state_bark) {
+            lv_animimg_set_src(animing, SRC(bark_imgs));
+            lv_animimg_set_duration(animing, ANIMATION_SPEED_BARK);
+            lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
+            lv_animimg_start(animing);
+            current_anim_state = anim_state_bark;
+        }
+    } else if (mods & (MOD_LCTL | MOD_RCTL)) {
         if (current_anim_state != anim_state_sneak) {
             lv_animimg_set_src(animing, SRC(sneak_imgs));
             lv_animimg_set_duration(animing, ANIMATION_SPEED_SNEAK);
             lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
             lv_animimg_start(animing);
             current_anim_state = anim_state_sneak;
-        }
+        }    
     } else if (state.wpm < 15) {
         if (current_anim_state != anim_state_idle) {
             lv_animimg_set_src(animing, SRC(idle_imgs));
@@ -133,6 +156,7 @@ ZMK_DISPLAY_WIDGET_LISTENER(widget_luna, struct luna_wpm_status_state, luna_wpm_
                             luna_wpm_status_get_state)
 
 ZMK_SUBSCRIPTION(widget_luna, zmk_wpm_state_changed);
+ZMK_SUBSCRIPTION(widget_luna, zmk_hid_indicators_changed);
 
 int zmk_widget_luna_init(struct zmk_widget_luna *widget, lv_obj_t *parent) {
     widget->obj = lv_animimg_create(parent);
