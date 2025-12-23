@@ -83,13 +83,13 @@ static void draw_battery(lv_obj_t *canvas, uint8_t level, bool usb_present) {
     } else {
         lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
     }
-
-    
+ 
     lv_draw_rect_dsc_t rect_fill_dsc;
     lv_draw_rect_dsc_init(&rect_fill_dsc);
     rect_fill_dsc.bg_color = lv_color_black();
 
-
+    lv_layer_t layer;
+    lv_canvas_init_layer(canvas, &layer);
 
     lv_canvas_set_px(canvas, 0, 0, lv_color_black(), LV_OPA_COVER);
     lv_canvas_set_px(canvas, 0, 4, lv_color_black(), LV_OPA_COVER);
@@ -98,8 +98,10 @@ static void draw_battery(lv_obj_t *canvas, uint8_t level, bool usb_present) {
 
     if (level <= 99 && level > 0)
     {
-        lv_area_t coords = {level, 1, 100 - level, 3};
-        lv_draw_rect(&canvas, &rect_fill_dsc, &coords);
+        lv_area_t coords = {level, 1, 100, 3};
+        lv_draw_rect(&layer, &rect_fill_dsc, &coords);
+        lv_canvas_finish_layer(canvas, &layer);
+
         lv_canvas_set_px(canvas, 100, 1, lv_color_black(), LV_OPA_COVER);
         lv_canvas_set_px(canvas, 100, 2, lv_color_black(), LV_OPA_COVER);
         lv_canvas_set_px(canvas, 100, 3, lv_color_black(), LV_OPA_COVER);
