@@ -44,32 +44,25 @@ const lv_img_dsc_t *idle_imgs[] = {
 };
 
 #define ANIMATION_SPEED_SLOW 400
-const lv_img_dsc_t *slow_imgs[] = {
-    &cat_right,
-    &cat_left,
-};
-
 #define ANIMATION_SPEED_MID 300
-const lv_img_dsc_t *mid_imgs[] = {
-    &cat_right,
-    &cat_left,
-};
-
-
 #define ANIMATION_SPEED_FAST 200
-const lv_img_dsc_t *fast_imgs[] = {
+const lv_img_dsc_t *tap_imgs[] = {
     &cat_right,
     &cat_left,
 };
 
-#define ANIMATION_SPEED_SMASH 300
+#define ANIMATION_SPEED_SMASH 600
 const lv_img_dsc_t *smash_imgs[] = {
-    &cat_smash1,
+    &cat_smash2,
+    &cat_smash2,
     &cat_smash2,
     &cat_smash2,
     &cat_smash3,
     &cat_smash4,
     &cat_smash4,
+    &cat_smash1,
+    &cat_smash1,
+    &cat_smash1,
 };
 
 struct bongo_cat_wpm_status_state {
@@ -106,7 +99,7 @@ static void set_animation(lv_obj_t *animing, struct bongo_cat_wpm_status_state s
         }
     } else if (state.wpm < 40) {
         if (current_anim_state != anim_state_slow) {
-            lv_animimg_set_src(animing, SRC(slow_imgs));
+            lv_animimg_set_src(animing, SRC(tap_imgs));
             lv_animimg_set_duration(animing, ANIMATION_SPEED_SLOW);
             lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
             lv_animimg_start(animing);
@@ -114,7 +107,7 @@ static void set_animation(lv_obj_t *animing, struct bongo_cat_wpm_status_state s
         }
     } else if (state.wpm < 70) {
         if (current_anim_state != anim_state_mid) {
-            lv_animimg_set_src(animing, SRC(mid_imgs));
+            lv_animimg_set_src(animing, SRC(tap_imgs));
             lv_animimg_set_duration(animing, ANIMATION_SPEED_MID);
             lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
             lv_animimg_start(animing);
@@ -122,7 +115,7 @@ static void set_animation(lv_obj_t *animing, struct bongo_cat_wpm_status_state s
         }
     } else {
         if (current_anim_state != anim_state_fast) {
-            lv_animimg_set_src(animing, SRC(fast_imgs));
+            lv_animimg_set_src(animing, SRC(tap_imgs));
             lv_animimg_set_duration(animing, ANIMATION_SPEED_FAST);
             lv_animimg_set_repeat_count(animing, LV_ANIM_REPEAT_INFINITE);
             lv_animimg_start(animing);
